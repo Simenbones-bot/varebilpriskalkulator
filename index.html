@@ -80,6 +80,9 @@
     border-radius: var(--radius);
     padding: 1.75rem;
     box-shadow: var(--shadow-md);
+    position: sticky;
+    top: 70px; /* overrides by JS to match actual header height */
+    z-index: 9;
   }
 
   .result-card .label {
@@ -651,37 +654,32 @@
     </div>
     <div class="card-body">
       <p style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:1rem;">
-        Velg hvor stor andel av leasing, forsikring og kontor/parkering som skal inngå i timeprisberegningen.
+        Velg hvor stor andel av kapitalkostnadene (leasing + forsikring + kontor/parkering) som skal inngå i timeprisberegningen. Resten ignoreres.
       </p>
 
-      <div class="slider-row">
+      <div class="slider-row" style="border-bottom:none">
         <div class="slider-header">
-          <span class="slider-label">Leasing</span>
+          <span class="slider-label">Kapitalandel</span>
           <div class="slider-value-display">
-            <strong id="sl-leasing-pct">100</strong>% &nbsp;·&nbsp; <span id="sl-leasing-kr">0 kr/mnd</span>
+            <strong id="sl-kapital-pct">100</strong>% &nbsp;·&nbsp; <span id="sl-kapital-kr">0 kr/mnd inkludert</span>
           </div>
         </div>
-        <input type="range" id="sl-leasing" min="0" max="100" value="100" oninput="onSlider('leasing')">
+        <input type="range" id="sl-kapital" min="0" max="100" value="100" oninput="onSlider()">
       </div>
 
-      <div class="slider-row">
-        <div class="slider-header">
-          <span class="slider-label">Forsikring</span>
-          <div class="slider-value-display">
-            <strong id="sl-forsikring-pct">100</strong>% &nbsp;·&nbsp; <span id="sl-forsikring-kr">0 kr/mnd</span>
-          </div>
+      <div class="computed-box" style="margin-top:0.75rem">
+        <div class="row">
+          <span class="key">Samlet kapitalpott (leasing + forsikring + kontor)</span>
+          <span class="val" id="sl-kapital-total">0 kr/mnd</span>
         </div>
-        <input type="range" id="sl-forsikring" min="0" max="100" value="100" oninput="onSlider('forsikring')">
-      </div>
-
-      <div class="slider-row">
-        <div class="slider-header">
-          <span class="slider-label">Kontor / parkering</span>
-          <div class="slider-value-display">
-            <strong id="sl-kontor-pct">100</strong>% &nbsp;·&nbsp; <span id="sl-kontor-kr">0 kr/mnd</span>
-          </div>
+        <div class="row">
+          <span class="key">Inkludert i timeprisberegningen</span>
+          <span class="val" id="sl-kapital-inkl">0 kr/mnd</span>
         </div>
-        <input type="range" id="sl-kontor" min="0" max="100" value="100" oninput="onSlider('kontor')">
+        <div class="row">
+          <span class="key">Holdes utenfor beregningen</span>
+          <span class="val" id="sl-kapital-ekskl" style="color:var(--text-secondary)">0 kr/mnd</span>
+        </div>
       </div>
     </div>
   </div>
@@ -845,9 +843,7 @@ const DEFAULTS = {
   service: 800,
   skade: 400,
   kontor: 600,
-  slLeasing: 100,
-  slForsikring: 100,
-  slKontor: 100,
+  slKapital: 100,
   kmUke: 500,
   forbruk: 2.5,
   strompris: 1.8,
@@ -877,9 +873,7 @@ function gatherState() {
     service: numVal('service'),
     skade: numVal('skade'),
     kontor: numVal('kontor'),
-    slLeasing: numVal('sl-leasing'),
-    slForsikring: numVal('sl-forsikring'),
-    slKontor: numVal('sl-kontor'),
+    slKapital: numVal('sl-kapital'),
     kmUke: numVal('km-uke'),
     forbruk: numVal('forbruk'),
     strompris: numVal('strompris'),
@@ -899,9 +893,9 @@ function applyState(state) {
   setVal('service', state.service ?? DEFAULTS.service);
   setVal('skade', state.skade ?? DEFAULTS.skade);
   setVal('kontor', state.kontor ?? DEFAULTS.kontor);
-  setVal('sl-leasing', state.slLeasing ?? DEFAULTS.slLeasing);
-  setVal('sl-forsikring', state.slForsikring ?? DEFAULTS.slForsikring);
-  setVal('sl-kontor', state.slKontor ?? DEFAULTS.slKontor);
+  // backward compat: if old state had slLeasing, use that as slKapital
+  const kapital = state.slKapital ?? state.slLeasing ?? DEFAULTS.slKapital;
+  setVal('sl-kapital', kapital);
   setVal('km-uke', state.kmUke ?? DEFAULTS.kmUke);
   setVal('forbruk', state.forbruk ?? DEFAULTS.forbruk);
   setVal('strompris', state.strompris ?? DEFAULTS.strompris);
@@ -1004,10 +998,22 @@ function removeEgen(id) {
 
 // ─── Slider handler ───────────────────────────────────────────────────────────
 
-function onSlider(key) {
+function onSlider() {
   recalc();
   saveState();
 }
+
+// ─── Sticky result card ───────────────────────────────────────────────────────
+
+function updateStickyTop() {
+  const header = document.querySelector('header');
+  const card   = document.querySelector('.result-card');
+  if (header && card) {
+    card.style.top = header.offsetHeight + 'px';
+  }
+}
+
+window.addEventListener('resize', updateStickyTop);
 
 // ─── Core recalculation ───────────────────────────────────────────────────────
 
@@ -1019,9 +1025,7 @@ function recalc() {
   const skade        = numVal('skade');
   const kontor       = numVal('kontor');
 
-  const slLeasing    = numVal('sl-leasing') / 100;
-  const slForsikring = numVal('sl-forsikring') / 100;
-  const slKontor     = numVal('sl-kontor') / 100;
+  const slKapital    = numVal('sl-kapital') / 100;
 
   const kmUke        = numVal('km-uke');
   const forbruk      = numVal('forbruk');
@@ -1034,18 +1038,20 @@ function recalc() {
   const konsernPct   = numVal('konsern-pct') / 100;
   const paslagPct    = numVal('paslag-pct') / 100;
 
-  // Update slider displays
-  setText('sl-leasing-pct', Math.round(numVal('sl-leasing')));
-  setText('sl-forsikring-pct', Math.round(numVal('sl-forsikring')));
-  setText('sl-kontor-pct', Math.round(numVal('sl-kontor')));
-  setText('sl-leasing-kr', fmt(leasing * slLeasing) + '/mnd');
-  setText('sl-forsikring-kr', fmt(forsikring * slForsikring) + '/mnd');
-  setText('sl-kontor-kr', fmt(kontor * slKontor) + '/mnd');
+  // Update single capital slider display
+  const kapitalpott  = leasing + forsikring + kontor;
+  const kapitalInkl  = kapitalpott * slKapital;
+  const kapitalEkskl = kapitalpott - kapitalInkl;
+  setText('sl-kapital-pct', Math.round(numVal('sl-kapital')));
+  setText('sl-kapital-kr', fmt(kapitalInkl) + '/mnd inkludert');
+  setText('sl-kapital-total', fmt(kapitalpott) + '/mnd');
+  setText('sl-kapital-inkl', fmt(kapitalInkl) + '/mnd');
+  setText('sl-kapital-ekskl', fmt(kapitalEkskl) + '/mnd');
 
   // Capital-adjusted fixed costs per month
-  const leasingInkl    = leasing * slLeasing;
-  const forsikringInkl = forsikring * slForsikring;
-  const kontorInkl     = kontor * slKontor;
+  const leasingInkl    = leasing * slKapital;
+  const forsikringInkl = forsikring * slKapital;
+  const kontorInkl     = kontor * slKapital;
 
   const egneSum = egneKostnader.reduce((s, e) => s + (e.belop || 0), 0);
 
@@ -1135,7 +1141,6 @@ function copyLink() {
 }
 
 function buildEmailBody() {
-  const tp    = Math.round(numVal('sl-leasing') > 0 ? parseResultTimepris() : 0);
   const state = gatherState();
   const url   = stateToUrl();
 
@@ -1156,9 +1161,7 @@ function buildEmailBody() {
     ...(state.egneKostnader.map(e => `  ${e.navn || 'Kostnad'}:  ${fmt(e.belop)}`)),
     '',
     'KAPITALFORDELING',
-    `  Leasing andel:         ${state.slLeasing}%`,
-    `  Forsikring andel:      ${state.slForsikring}%`,
-    `  Kontor andel:          ${state.slKontor}%`,
+    `  Kapitalandel (leasing + forsikring + kontor): ${state.slKapital}%`,
     '',
     'STRØM / DRIVSTOFF',
     `  Km per uke:            ${state.kmUke} km`,
@@ -1195,9 +1198,7 @@ function getTimepris() {
   const service      = numVal('service');
   const skade        = numVal('skade');
   const kontor       = numVal('kontor');
-  const slLeasing    = numVal('sl-leasing') / 100;
-  const slForsikring = numVal('sl-forsikring') / 100;
-  const slKontor     = numVal('sl-kontor') / 100;
+  const slKapital    = numVal('sl-kapital') / 100;
   const kmUke        = numVal('km-uke');
   const forbruk      = numVal('forbruk');
   const strompris    = numVal('strompris');
@@ -1207,9 +1208,9 @@ function getTimepris() {
   const konsernPct   = numVal('konsern-pct') / 100;
   const paslagPct    = numVal('paslag-pct') / 100;
 
-  const leasingInkl    = leasing * slLeasing;
-  const forsikringInkl = forsikring * slForsikring;
-  const kontorInkl     = kontor * slKontor;
+  const leasingInkl    = leasing * slKapital;
+  const forsikringInkl = forsikring * slKapital;
+  const kontorInkl     = kontor * slKapital;
   const egneSum        = egneKostnader.reduce((s, e) => s + (e.belop || 0), 0);
   const fastMnd        = leasingInkl + forsikringInkl + bompenger + service + skade + kontorInkl + egneSum;
   const kwhPerMnd      = (kmUke / 10) * forbruk * 4.33;
@@ -1255,7 +1256,7 @@ function attachListeners() {
     'km-uke','forbruk','strompris',
     'sjafor-kost','sosiale-pct','timer-uke',
     'konsern-pct','paslag-pct',
-    'sl-leasing','sl-forsikring','sl-kontor'
+    'sl-kapital'
   ];
   ids.forEach(id => {
     const el = document.getElementById(id);
@@ -1285,6 +1286,7 @@ function attachListeners() {
 
   attachListeners();
   recalc();
+  updateStickyTop();
 })();
 </script>
 </body>
