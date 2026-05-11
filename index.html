@@ -1,0 +1,1291 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Varebil Priskalkulator</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f5f5f3;
+    --surface: #ffffff;
+    --border: #e0e0dc;
+    --border-strong: #c8c8c4;
+    --text: #1a1a18;
+    --text-secondary: #5a5a56;
+    --accent: #2563eb;
+    --accent-light: #eff6ff;
+    --accent-hover: #1d4ed8;
+    --success: #16a34a;
+    --danger: #dc2626;
+    --radius: 10px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+
+    --c-leasing: #3b82f6;
+    --c-strom: #10b981;
+    --c-sjafør: #f59e0b;
+    --c-sosiale: #f97316;
+    --c-konsern: #8b5cf6;
+    --c-paslag: #ec4899;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 15px;
+    line-height: 1.5;
+    min-height: 100vh;
+    padding-bottom: 3rem;
+  }
+
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 1.25rem 1.5rem;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    box-shadow: var(--shadow);
+  }
+
+  header h1 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--text);
+  }
+
+  header p {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-top: 0.1rem;
+  }
+
+  .container {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 1.5rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  /* Result card */
+  .result-card {
+    background: var(--text);
+    color: #fff;
+    border-radius: var(--radius);
+    padding: 1.75rem;
+    box-shadow: var(--shadow-md);
+  }
+
+  .result-card .label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    opacity: 0.6;
+    margin-bottom: 0.35rem;
+  }
+
+  .result-card .timepris-main {
+    font-size: clamp(2.5rem, 8vw, 4rem);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1;
+  }
+
+  .result-card .timepris-main span {
+    font-size: 0.4em;
+    font-weight: 400;
+    opacity: 0.7;
+    letter-spacing: 0;
+  }
+
+  .result-periods {
+    display: flex;
+    gap: 1.5rem;
+    margin-top: 1.25rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid rgba(255,255,255,0.12);
+  }
+
+  .result-periods .period {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .result-periods .period .val {
+    font-size: 1.15rem;
+    font-weight: 600;
+  }
+
+  .result-periods .period .lbl {
+    font-size: 0.72rem;
+    opacity: 0.6;
+    margin-top: 0.1rem;
+  }
+
+  /* Bar chart */
+  .bar-chart {
+    margin-top: 1.25rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid rgba(255,255,255,0.12);
+  }
+
+  .bar-chart .bar-label {
+    font-size: 0.72rem;
+    opacity: 0.6;
+    margin-bottom: 0.5rem;
+  }
+
+  .bar-track {
+    display: flex;
+    height: 20px;
+    border-radius: 6px;
+    overflow: hidden;
+    gap: 1px;
+    background: rgba(255,255,255,0.1);
+  }
+
+  .bar-seg {
+    height: 100%;
+    transition: width 0.3s ease;
+    min-width: 0;
+  }
+
+  .bar-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem 1.2rem;
+    margin-top: 0.75rem;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.72rem;
+    opacity: 0.8;
+  }
+
+  .legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* Cards */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+
+  .card-header {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .card-header h2 {
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-secondary);
+  }
+
+  .card-body {
+    padding: 1.25rem;
+  }
+
+  /* Form rows */
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .form-row:last-child { border-bottom: none; }
+
+  .form-row label {
+    font-size: 0.875rem;
+    color: var(--text);
+  }
+
+  .form-row .hint {
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+    margin-top: 0.1rem;
+  }
+
+  .input-suffix {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .input-suffix .suffix-text {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+  }
+
+  input[type="number"], input[type="text"] {
+    width: 110px;
+    padding: 0.45rem 0.65rem;
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-family: inherit;
+    color: var(--text);
+    background: var(--bg);
+    text-align: right;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    -moz-appearance: textfield;
+  }
+
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
+
+  input[type="number"]:focus, input[type="text"]:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+  }
+
+  input[type="text"].name-input {
+    text-align: left;
+    width: 160px;
+  }
+
+  /* Slider rows */
+  .slider-row {
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .slider-row:last-child { border-bottom: none; }
+
+  .slider-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 0.5rem;
+  }
+
+  .slider-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+
+  .slider-value-display {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    text-align: right;
+  }
+
+  .slider-value-display strong {
+    color: var(--accent);
+    font-size: 0.9rem;
+  }
+
+  input[type="range"] {
+    width: 100%;
+    height: 4px;
+    -webkit-appearance: none;
+    background: var(--border-strong);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 2px solid #fff;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    cursor: pointer;
+  }
+
+  input[type="range"]::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 2px solid #fff;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    cursor: pointer;
+    border: none;
+  }
+
+  /* Info rows (computed outputs) */
+  .info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.55rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .info-row:last-child { border-bottom: none; }
+
+  .info-row .info-label {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+  }
+
+  .info-row .info-val {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  /* Dynamic rows (egne kostnader) */
+  .dynamic-rows { display: flex; flex-direction: column; }
+
+  .dynamic-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 0.5rem;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .dynamic-row input[type="text"].name-input { width: 100%; text-align: left; }
+  .dynamic-row input[type="number"] { width: 100px; }
+
+  .btn-remove {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 1.1rem;
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+    line-height: 1;
+    transition: color 0.15s, background 0.15s;
+  }
+
+  .btn-remove:hover { color: var(--danger); background: #fee2e2; }
+
+  .btn-add {
+    margin-top: 0.75rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.82rem;
+    color: var(--accent);
+    background: var(--accent-light);
+    border: 1px solid #bfdbfe;
+    border-radius: 6px;
+    padding: 0.4rem 0.9rem;
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: 500;
+    transition: background 0.15s, border-color 0.15s;
+  }
+
+  .btn-add:hover { background: #dbeafe; border-color: #93c5fd; }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.55rem 1.1rem;
+    border-radius: 7px;
+    font-size: 0.85rem;
+    font-family: inherit;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.15s;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+
+  .btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+
+  .btn-secondary {
+    background: var(--surface);
+    color: var(--text);
+    border-color: var(--border-strong);
+  }
+
+  .btn-secondary:hover { background: var(--bg); border-color: #a0a09c; }
+
+  .btn-danger {
+    background: var(--surface);
+    color: var(--danger);
+    border-color: #fca5a5;
+  }
+
+  .btn-danger:hover { background: #fee2e2; border-color: var(--danger); }
+
+  .actions-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    padding: 1rem 1.25rem;
+    border-top: 1px solid var(--border);
+    background: var(--bg);
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 1.5rem;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--text);
+    color: #fff;
+    padding: 0.65rem 1.25rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    box-shadow: var(--shadow-md);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s, transform 0.2s;
+    z-index: 100;
+    white-space: nowrap;
+  }
+
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* Pct badge */
+  .pct-badge {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.15rem 0.45rem;
+    border-radius: 4px;
+    background: var(--accent-light);
+    color: var(--accent);
+    margin-left: 0.5rem;
+  }
+
+  /* Computed highlight */
+  .computed-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    margin-top: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .computed-box .row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+  }
+
+  .computed-box .row .key { color: var(--text-secondary); }
+  .computed-box .row .val { font-weight: 600; }
+
+  .section-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 0.5rem 0;
+  }
+
+  /* Responsive */
+  @media (max-width: 540px) {
+    .result-periods { gap: 1rem; flex-wrap: wrap; }
+    .form-row { grid-template-columns: 1fr; }
+    .form-row .input-suffix { justify-content: flex-end; }
+    .actions-row { padding: 0.75rem 1rem; }
+    input[type="number"], input[type="text"] { width: 100%; text-align: left; }
+    .dynamic-row { grid-template-columns: 1fr auto; }
+    .dynamic-row input[type="number"] { width: 100%; }
+    .dynamic-row input[type="text"].name-input { grid-column: 1 / -1; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Varebil Priskalkulator</h1>
+  <p>Beregn riktig timespris for din varebil</p>
+</header>
+
+<div class="container">
+
+  <!-- RESULT CARD -->
+  <div class="result-card">
+    <div class="label">Timespris inkl. alt</div>
+    <div class="timepris-main" id="r-timepris">0 <span>kr/time</span></div>
+
+    <div class="result-periods">
+      <div class="period">
+        <div class="val" id="r-uke">0 kr</div>
+        <div class="lbl">per uke</div>
+      </div>
+      <div class="period">
+        <div class="val" id="r-mnd">0 kr</div>
+        <div class="lbl">per måned</div>
+      </div>
+      <div class="period">
+        <div class="val" id="r-ar">0 kr</div>
+        <div class="lbl">per år</div>
+      </div>
+    </div>
+
+    <div class="bar-chart">
+      <div class="bar-label">Kostnadsfordeling</div>
+      <div class="bar-track" id="bar-track">
+        <div class="bar-seg" id="bar-leasing" style="background:var(--c-leasing)"></div>
+        <div class="bar-seg" id="bar-strom" style="background:var(--c-strom)"></div>
+        <div class="bar-seg" id="bar-sjafor" style="background:var(--c-sjafør)"></div>
+        <div class="bar-seg" id="bar-sosiale" style="background:var(--c-sosiale)"></div>
+        <div class="bar-seg" id="bar-konsern" style="background:var(--c-konsern)"></div>
+        <div class="bar-seg" id="bar-paslag" style="background:var(--c-paslag)"></div>
+      </div>
+      <div class="bar-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:var(--c-leasing)"></div><span>Fast/leasing</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--c-strom)"></div><span>Strøm</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--c-sjafør)"></div><span>Sjåfør</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--c-sosiale)"></div><span>Sosiale kost.</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--c-konsern)"></div><span>Konsernfelles</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--c-paslag)"></div><span>Påslag</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FASTE KOSTNADER -->
+  <div class="card">
+    <div class="card-header">
+      <h2>Faste kostnader</h2>
+      <span class="pct-badge">kr/mnd</span>
+    </div>
+    <div class="card-body">
+      <div class="form-row">
+        <div>
+          <label>Leasing</label>
+        </div>
+        <div class="input-suffix">
+          <input type="number" id="leasing" value="8000" min="0">
+          <span class="suffix-text">kr</span>
+        </div>
+      </div>
+      <div class="form-row">
+        <div><label>Forsikring</label></div>
+        <div class="input-suffix">
+          <input type="number" id="forsikring" value="2500" min="0">
+          <span class="suffix-text">kr</span>
+        </div>
+      </div>
+      <div class="form-row">
+        <div><label>Bompenger</label></div>
+        <div class="input-suffix">
+          <input type="number" id="bompenger" value="500" min="0">
+          <span class="suffix-text">kr</span>
+        </div>
+      </div>
+      <div class="form-row">
+        <div><label>Service / vedlikehold</label></div>
+        <div class="input-suffix">
+          <input type="number" id="service" value="800" min="0">
+          <span class="suffix-text">kr</span>
+        </div>
+      </div>
+      <div class="form-row">
+        <div><label>Skade / erstatninger</label></div>
+        <div class="input-suffix">
+          <input type="number" id="skade" value="400" min="0">
+          <span class="suffix-text">kr</span>
+        </div>
+      </div>
+      <div class="form-row">
+        <div><label>Kontor / parkering</label></div>
+        <div class="input-suffix">
+          <input type="number" id="kontor" value="600" min="0">
+          <span class="suffix-text">kr</span>
+        </div>
+      </div>
+
+      <div class="dynamic-rows" id="egne-kostnader"></div>
+
+      <button class="btn-add" onclick="addEgenKostnad()">+ Legg til kostnad</button>
+
+      <div class="computed-box" style="margin-top:1rem">
+        <div class="row">
+          <span class="key">Totale faste kostnader (inkl. kapitalandel)</span>
+          <span class="val" id="r-fast-total">0 kr/mnd</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KAPITALFORDELING -->
+  <div class="card">
+    <div class="card-header">
+      <h2>Kapitalfordeling</h2>
+    </div>
+    <div class="card-body">
+      <p style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:1rem;">
+        Velg hvor stor andel av leasing, forsikring og kontor/parkering som skal inngå i timeprisberegningen.
+      </p>
+
+      <div class="slider-row">
+        <div class="slider-header">
+          <span class="slider-label">Leasing</span>
+          <div class="slider-value-display">
+            <strong id="sl-leasing-pct">100</strong>% &nbsp;·&nbsp; <span id="sl-leasing-kr">0 kr/mnd</span>
+          </div>
+        </div>
+        <input type="range" id="sl-leasing" min="0" max="100" value="100" oninput="onSlider('leasing')">
+      </div>
+
+      <div class="slider-row">
+        <div class="slider-header">
+          <span class="slider-label">Forsikring</span>
+          <div class="slider-value-display">
+            <strong id="sl-forsikring-pct">100</strong>% &nbsp;·&nbsp; <span id="sl-forsikring-kr">0 kr/mnd</span>
+          </div>
+        </div>
+        <input type="range" id="sl-forsikring" min="0" max="100" value="100" oninput="onSlider('forsikring')">
+      </div>
+
+      <div class="slider-row">
+        <div class="slider-header">
+          <span class="slider-label">Kontor / parkering</span>
+          <div class="slider-value-display">
+            <strong id="sl-kontor-pct">100</strong>% &nbsp;·&nbsp; <span id="sl-kontor-kr">0 kr/mnd</span>
+          </div>
+        </div>
+        <input type="range" id="sl-kontor" min="0" max="100" value="100" oninput="onSlider('kontor')">
+      </div>
+    </div>
+  </div>
+
+  <!-- STRØM / DRIVSTOFF -->
+  <div class="card">
+    <div class="card-header">
+      <h2>Strøm / drivstoff</h2>
+    </div>
+    <div class="card-body">
+      <div class="form-row">
+        <div><label>Kilometer per uke</label></div>
+        <div class="input-suffix">
+          <input type="number" id="km-uke" value="500" min="0">
+          <span class="suffix-text">km</span>
+        </div>
+      </div>
+      <div class="form-row">
+        <div>
+          <label>Forbruk per 10 km</label>
+          <div class="hint">kWh – typisk 2–3 kWh for el-varebil</div>
+        </div>
+        <div class="input-suffix">
+          <input type="number" id="forbruk" value="2.5" min="0" step="0.1">
+          <span class="suffix-text">kWh/10km</span>
+        </div>
+      </div>
+      <div class="form-row">
+        <div><label>Strømpris</label></div>
+        <div class="input-suffix">
+          <input type="number" id="strompris" value="1.8" min="0" step="0.01">
+          <span class="suffix-text">kr/kWh</span>
+        </div>
+      </div>
+
+      <div class="computed-box">
+        <div class="row">
+          <span class="key">Strømkostnad per måned</span>
+          <span class="val" id="r-strom-mnd">0 kr/mnd</span>
+        </div>
+        <div class="row">
+          <span class="key">Strømkostnad per time (basert på kjøretimer)</span>
+          <span class="val" id="r-strom-time">0 kr/time</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SJÅFØR OG SOSIALE KOSTNADER -->
+  <div class="card">
+    <div class="card-header">
+      <h2>Sjåfør og sosiale kostnader</h2>
+    </div>
+    <div class="card-body">
+      <div class="form-row">
+        <div>
+          <label>Sjåførkostnad</label>
+          <div class="hint">Bruttolønn eller timesats</div>
+        </div>
+        <div class="input-suffix">
+          <input type="number" id="sjafor-kost" value="350" min="0">
+          <span class="suffix-text">kr/time</span>
+        </div>
+      </div>
+      <div class="form-row">
+        <div>
+          <label>Sosiale kostnader</label>
+          <div class="hint">Pensjon, feriepenger, arbeidsgiveravgift m.m.</div>
+        </div>
+        <div class="input-suffix">
+          <input type="number" id="sosiale-pct" value="25" min="0" max="200" step="0.5">
+          <span class="suffix-text">%</span>
+        </div>
+      </div>
+      <div class="form-row">
+        <div><label>Kjøretimer per uke</label></div>
+        <div class="input-suffix">
+          <input type="number" id="timer-uke" value="37.5" min="0.1" step="0.5">
+          <span class="suffix-text">t/uke</span>
+        </div>
+      </div>
+
+      <div class="computed-box">
+        <div class="row">
+          <span class="key">Sosiale kostnader</span>
+          <span class="val" id="r-sosiale-kr">0 kr/time</span>
+        </div>
+        <div class="row">
+          <span class="key">Justert sjåførkost inkl. sosiale</span>
+          <span class="val" id="r-sjafor-justert">0 kr/time</span>
+        </div>
+        <div class="section-divider"></div>
+        <div class="row">
+          <span class="key">Sjåførkostnad per måned</span>
+          <span class="val" id="r-sjafor-mnd">0 kr/mnd</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PÅSLAG OG KONSERNFELLES -->
+  <div class="card">
+    <div class="card-header">
+      <h2>Påslag og konsernfelles</h2>
+    </div>
+    <div class="card-body">
+      <div class="form-row">
+        <div>
+          <label>Konsernfelles</label>
+          <div class="hint">Legges på first, på alle kostnader</div>
+        </div>
+        <div class="input-suffix">
+          <input type="number" id="konsern-pct" value="5" min="0" max="200" step="0.5">
+          <span class="suffix-text">%</span>
+        </div>
+      </div>
+      <div class="form-row">
+        <div>
+          <label>Påslag / fortjeneste</label>
+          <div class="hint">Legges på etter konsernfelles</div>
+        </div>
+        <div class="input-suffix">
+          <input type="number" id="paslag-pct" value="15" min="0" max="500" step="0.5">
+          <span class="suffix-text">%</span>
+        </div>
+      </div>
+
+      <div class="computed-box">
+        <div class="row">
+          <span class="key">Totalt kombinert påslag</span>
+          <span class="val" id="r-paslag-total">0 %</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HANDLINGER -->
+  <div class="card">
+    <div class="card-header">
+      <h2>Del og eksporter</h2>
+    </div>
+    <div class="actions-row">
+      <button class="btn btn-primary" onclick="copyLink()">Kopier lenke</button>
+      <button class="btn btn-secondary" onclick="sendEmail()">Send utregning på e-post</button>
+      <button class="btn btn-secondary" onclick="shareKollega()">Del med kollega</button>
+      <button class="btn btn-danger" onclick="resetAll()">Nullstill</button>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── State & Defaults ────────────────────────────────────────────────────────
+
+const DEFAULTS = {
+  leasing: 8000,
+  forsikring: 2500,
+  bompenger: 500,
+  service: 800,
+  skade: 400,
+  kontor: 600,
+  slLeasing: 100,
+  slForsikring: 100,
+  slKontor: 100,
+  kmUke: 500,
+  forbruk: 2.5,
+  strompris: 1.8,
+  sjaforKost: 350,
+  sosialePct: 25,
+  timerUke: 37.5,
+  konsernPct: 5,
+  paslagPct: 15,
+  egneKostnader: []
+};
+
+let egneKostnader = []; // [{id, navn, belop}]
+let egneIdCounter = 0;
+
+// ─── localStorage ─────────────────────────────────────────────────────────────
+
+function saveState() {
+  const state = gatherState();
+  try { localStorage.setItem('vpk_v2', JSON.stringify(state)); } catch(e) {}
+}
+
+function gatherState() {
+  return {
+    leasing: numVal('leasing'),
+    forsikring: numVal('forsikring'),
+    bompenger: numVal('bompenger'),
+    service: numVal('service'),
+    skade: numVal('skade'),
+    kontor: numVal('kontor'),
+    slLeasing: numVal('sl-leasing'),
+    slForsikring: numVal('sl-forsikring'),
+    slKontor: numVal('sl-kontor'),
+    kmUke: numVal('km-uke'),
+    forbruk: numVal('forbruk'),
+    strompris: numVal('strompris'),
+    sjaforKost: numVal('sjafor-kost'),
+    sosialePct: numVal('sosiale-pct'),
+    timerUke: numVal('timer-uke'),
+    konsernPct: numVal('konsern-pct'),
+    paslagPct: numVal('paslag-pct'),
+    egneKostnader: egneKostnader.map(e => ({ navn: e.navn, belop: e.belop }))
+  };
+}
+
+function applyState(state) {
+  setVal('leasing', state.leasing ?? DEFAULTS.leasing);
+  setVal('forsikring', state.forsikring ?? DEFAULTS.forsikring);
+  setVal('bompenger', state.bompenger ?? DEFAULTS.bompenger);
+  setVal('service', state.service ?? DEFAULTS.service);
+  setVal('skade', state.skade ?? DEFAULTS.skade);
+  setVal('kontor', state.kontor ?? DEFAULTS.kontor);
+  setVal('sl-leasing', state.slLeasing ?? DEFAULTS.slLeasing);
+  setVal('sl-forsikring', state.slForsikring ?? DEFAULTS.slForsikring);
+  setVal('sl-kontor', state.slKontor ?? DEFAULTS.slKontor);
+  setVal('km-uke', state.kmUke ?? DEFAULTS.kmUke);
+  setVal('forbruk', state.forbruk ?? DEFAULTS.forbruk);
+  setVal('strompris', state.strompris ?? DEFAULTS.strompris);
+  setVal('sjafor-kost', state.sjaforKost ?? DEFAULTS.sjaforKost);
+  setVal('sosiale-pct', state.sosialePct ?? DEFAULTS.sosialePct);
+  setVal('timer-uke', state.timerUke ?? DEFAULTS.timerUke);
+  setVal('konsern-pct', state.konsernPct ?? DEFAULTS.konsernPct);
+  setVal('paslag-pct', state.paslagPct ?? DEFAULTS.paslagPct);
+
+  egneKostnader = [];
+  egneIdCounter = 0;
+  document.getElementById('egne-kostnader').innerHTML = '';
+  (state.egneKostnader || []).forEach(e => addEgenKostnad(e.navn, e.belop));
+}
+
+// ─── URL sharing ──────────────────────────────────────────────────────────────
+
+function stateToUrl() {
+  const state = gatherState();
+  const json = JSON.stringify(state);
+  const b64 = btoa(unescape(encodeURIComponent(json)));
+  const url = location.origin + location.pathname + '?d=' + encodeURIComponent(b64);
+  return url;
+}
+
+function loadFromUrl() {
+  const params = new URLSearchParams(location.search);
+  const d = params.get('d');
+  if (!d) return false;
+  try {
+    const json = decodeURIComponent(escape(atob(decodeURIComponent(d))));
+    const state = JSON.parse(json);
+    applyState(state);
+    return true;
+  } catch(e) {
+    return false;
+  }
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function numVal(id) {
+  return parseFloat(document.getElementById(id)?.value) || 0;
+}
+
+function setVal(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.value = val;
+}
+
+function fmt(n) {
+  return Math.round(n).toLocaleString('nb-NO') + ' kr';
+}
+
+function fmtDec(n, d=0) {
+  return n.toLocaleString('nb-NO', { minimumFractionDigits: d, maximumFractionDigits: d });
+}
+
+// ─── Dynamic egne kostnader ───────────────────────────────────────────────────
+
+function addEgenKostnad(navn='', belop=0) {
+  const id = ++egneIdCounter;
+  egneKostnader.push({ id, navn, belop });
+  const container = document.getElementById('egne-kostnader');
+
+  const row = document.createElement('div');
+  row.className = 'dynamic-row';
+  row.id = 'ek-row-' + id;
+  row.innerHTML = `
+    <input type="text" class="name-input" placeholder="Kostnadstype" value="${escHtml(navn)}"
+      oninput="updateEgen(${id},'navn',this.value)" >
+    <input type="number" value="${belop}" min="0" placeholder="0"
+      oninput="updateEgen(${id},'belop',this.value)">
+    <button class="btn-remove" onclick="removeEgen(${id})" title="Fjern">×</button>
+  `;
+  container.appendChild(row);
+  recalc();
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function updateEgen(id, field, val) {
+  const item = egneKostnader.find(e => e.id === id);
+  if (!item) return;
+  if (field === 'belop') item.belop = parseFloat(val) || 0;
+  else item.navn = val;
+  recalc();
+  saveState();
+}
+
+function removeEgen(id) {
+  egneKostnader = egneKostnader.filter(e => e.id !== id);
+  const row = document.getElementById('ek-row-' + id);
+  if (row) row.remove();
+  recalc();
+  saveState();
+}
+
+// ─── Slider handler ───────────────────────────────────────────────────────────
+
+function onSlider(key) {
+  recalc();
+  saveState();
+}
+
+// ─── Core recalculation ───────────────────────────────────────────────────────
+
+function recalc() {
+  const leasing      = numVal('leasing');
+  const forsikring   = numVal('forsikring');
+  const bompenger    = numVal('bompenger');
+  const service      = numVal('service');
+  const skade        = numVal('skade');
+  const kontor       = numVal('kontor');
+
+  const slLeasing    = numVal('sl-leasing') / 100;
+  const slForsikring = numVal('sl-forsikring') / 100;
+  const slKontor     = numVal('sl-kontor') / 100;
+
+  const kmUke        = numVal('km-uke');
+  const forbruk      = numVal('forbruk');
+  const strompris    = numVal('strompris');
+
+  const sjaforKost   = numVal('sjafor-kost');
+  const sosialePct   = numVal('sosiale-pct');
+  const timerUke     = numVal('timer-uke') || 1;
+
+  const konsernPct   = numVal('konsern-pct') / 100;
+  const paslagPct    = numVal('paslag-pct') / 100;
+
+  // Update slider displays
+  setText('sl-leasing-pct', Math.round(numVal('sl-leasing')));
+  setText('sl-forsikring-pct', Math.round(numVal('sl-forsikring')));
+  setText('sl-kontor-pct', Math.round(numVal('sl-kontor')));
+  setText('sl-leasing-kr', fmt(leasing * slLeasing) + '/mnd');
+  setText('sl-forsikring-kr', fmt(forsikring * slForsikring) + '/mnd');
+  setText('sl-kontor-kr', fmt(kontor * slKontor) + '/mnd');
+
+  // Capital-adjusted fixed costs per month
+  const leasingInkl    = leasing * slLeasing;
+  const forsikringInkl = forsikring * slForsikring;
+  const kontorInkl     = kontor * slKontor;
+
+  const egneSum = egneKostnader.reduce((s, e) => s + (e.belop || 0), 0);
+
+  const fastMnd = leasingInkl + forsikringInkl + bompenger + service + skade + kontorInkl + egneSum;
+  setText('r-fast-total', fmt(fastMnd) + '/mnd');
+
+  // Electricity
+  const kwhPerMnd   = (kmUke / 10) * forbruk * 4.33;
+  const stromMnd    = kwhPerMnd * strompris;
+  const stromPerTime = stromMnd / (timerUke * 4.33);
+  setText('r-strom-mnd', fmt(stromMnd) + '/mnd');
+  setText('r-strom-time', fmtDec(stromPerTime, 1) + ' kr/time');
+
+  // Driver
+  const sosialeKrPerTime   = sjaforKost * (sosialePct / 100);
+  const sjaforJustert      = sjaforKost * (1 + sosialePct / 100);
+  const sjaforMnd          = sjaforJustert * timerUke * 4.33;
+  setText('r-sosiale-kr', fmtDec(sosialeKrPerTime, 1) + ' kr/time');
+  setText('r-sjafor-justert', fmtDec(sjaforJustert, 1) + ' kr/time');
+  setText('r-sjafor-mnd', fmt(sjaforMnd) + '/mnd');
+
+  // Surcharge
+  const totPaslag = ((1 + konsernPct) * (1 + paslagPct) - 1) * 100;
+  setText('r-paslag-total', fmtDec(totPaslag, 1) + ' %');
+
+  // Hourly price
+  const fastPerTime  = fastMnd / (timerUke * 4.33);
+  const timeprisbas  = (fastPerTime + stromPerTime + sjaforJustert);
+  const timepris     = timeprisbas * (1 + konsernPct) * (1 + paslagPct);
+
+  // Breakdown (per time)
+  const fastKomponent    = fastPerTime;
+  const stromKomponent   = stromPerTime;
+  const sjaforKomponent  = sjaforKost;
+  const sosialeKomponent = sosialeKrPerTime;
+  const baseForPaslag    = fastKomponent + stromKomponent + sjaforKomponent + sosialeKomponent;
+  const konsernKomponent = baseForPaslag * konsernPct;
+  const paslagKomponent  = (baseForPaslag + konsernKomponent) * paslagPct;
+  const totalComponents  = fastKomponent + stromKomponent + sjaforKomponent + sosialeKomponent + konsernKomponent + paslagKomponent;
+
+  // Bar chart
+  function barPct(val) {
+    return totalComponents > 0 ? (val / totalComponents * 100).toFixed(2) + '%' : '0%';
+  }
+  document.getElementById('bar-leasing').style.width  = barPct(fastKomponent);
+  document.getElementById('bar-strom').style.width    = barPct(stromKomponent);
+  document.getElementById('bar-sjafor').style.width   = barPct(sjaforKomponent);
+  document.getElementById('bar-sosiale').style.width  = barPct(sosialeKomponent);
+  document.getElementById('bar-konsern').style.width  = barPct(konsernKomponent);
+  document.getElementById('bar-paslag').style.width   = barPct(paslagKomponent);
+
+  // Results
+  const ukeTimer = timerUke;
+  const mndTimer = timerUke * 4.33;
+  const arTimer  = mndTimer * 12;
+
+  setText('r-timepris', fmtDec(timepris, 0) + ' ​kr/time');
+  document.getElementById('r-timepris').innerHTML =
+    fmtDec(timepris, 0) + ' <span>kr/time</span>';
+  setText('r-uke',  fmt(timepris * ukeTimer));
+  setText('r-mnd',  fmt(timepris * mndTimer));
+  setText('r-ar',   fmt(timepris * arTimer));
+}
+
+function setText(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = val;
+}
+
+// ─── Actions ──────────────────────────────────────────────────────────────────
+
+function resetAll() {
+  if (!confirm('Nullstille alle verdier til standard?')) return;
+  applyState(DEFAULTS);
+  saveState();
+  recalc();
+  showToast('Verdier nullstilt');
+}
+
+function copyLink() {
+  const url = stateToUrl();
+  navigator.clipboard.writeText(url).then(() => {
+    showToast('Lenke kopiert!');
+  }).catch(() => {
+    prompt('Kopier lenken:', url);
+  });
+}
+
+function buildEmailBody() {
+  const tp    = Math.round(numVal('sl-leasing') > 0 ? parseResultTimepris() : 0);
+  const state = gatherState();
+  const url   = stateToUrl();
+
+  const timerUke = state.timerUke || 1;
+  const mndTimer = timerUke * 4.33;
+
+  const lines = [
+    'VAREBIL PRISKALKULATOR – UTREGNING',
+    '='.repeat(40),
+    '',
+    'FASTE KOSTNADER (kr/mnd)',
+    `  Leasing:               ${fmt(state.leasing)}`,
+    `  Forsikring:            ${fmt(state.forsikring)}`,
+    `  Bompenger:             ${fmt(state.bompenger)}`,
+    `  Service/vedlikehold:   ${fmt(state.service)}`,
+    `  Skade/erstatninger:    ${fmt(state.skade)}`,
+    `  Kontor/parkering:      ${fmt(state.kontor)}`,
+    ...(state.egneKostnader.map(e => `  ${e.navn || 'Kostnad'}:  ${fmt(e.belop)}`)),
+    '',
+    'KAPITALFORDELING',
+    `  Leasing andel:         ${state.slLeasing}%`,
+    `  Forsikring andel:      ${state.slForsikring}%`,
+    `  Kontor andel:          ${state.slKontor}%`,
+    '',
+    'STRØM / DRIVSTOFF',
+    `  Km per uke:            ${state.kmUke} km`,
+    `  Forbruk per 10 km:     ${state.forbruk} kWh`,
+    `  Strømpris:             ${state.strompris} kr/kWh`,
+    '',
+    'SJÅFØR OG SOSIALE KOSTNADER',
+    `  Sjåførkostnad:         ${state.sjaforKost} kr/time`,
+    `  Sosiale kostnader:     ${state.sosialePct}%`,
+    `  Kjøretimer per uke:    ${state.timerUke} t/uke`,
+    '',
+    'PÅSLAG',
+    `  Konsernfelles:         ${state.konsernPct}%`,
+    `  Påslag/fortjeneste:    ${state.paslagPct}%`,
+    '',
+    '='.repeat(40),
+    'RESULTAT',
+    `  Timespris:             ${fmt(getTimepris())}`,
+    `  Per uke:               ${fmt(getTimepris() * timerUke)}`,
+    `  Per måned:             ${fmt(getTimepris() * mndTimer)}`,
+    `  Per år:                ${fmt(getTimepris() * mndTimer * 12)}`,
+    '',
+    '='.repeat(40),
+    'Åpne kalkulatoren med disse verdiene:',
+    url
+  ];
+  return lines.join('\n');
+}
+
+function getTimepris() {
+  const leasing      = numVal('leasing');
+  const forsikring   = numVal('forsikring');
+  const bompenger    = numVal('bompenger');
+  const service      = numVal('service');
+  const skade        = numVal('skade');
+  const kontor       = numVal('kontor');
+  const slLeasing    = numVal('sl-leasing') / 100;
+  const slForsikring = numVal('sl-forsikring') / 100;
+  const slKontor     = numVal('sl-kontor') / 100;
+  const kmUke        = numVal('km-uke');
+  const forbruk      = numVal('forbruk');
+  const strompris    = numVal('strompris');
+  const sjaforKost   = numVal('sjafor-kost');
+  const sosialePct   = numVal('sosiale-pct');
+  const timerUke     = numVal('timer-uke') || 1;
+  const konsernPct   = numVal('konsern-pct') / 100;
+  const paslagPct    = numVal('paslag-pct') / 100;
+
+  const leasingInkl    = leasing * slLeasing;
+  const forsikringInkl = forsikring * slForsikring;
+  const kontorInkl     = kontor * slKontor;
+  const egneSum        = egneKostnader.reduce((s, e) => s + (e.belop || 0), 0);
+  const fastMnd        = leasingInkl + forsikringInkl + bompenger + service + skade + kontorInkl + egneSum;
+  const kwhPerMnd      = (kmUke / 10) * forbruk * 4.33;
+  const stromMnd       = kwhPerMnd * strompris;
+  const stromPerTime   = stromMnd / (timerUke * 4.33);
+  const sjaforJustert  = sjaforKost * (1 + sosialePct / 100);
+  const fastPerTime    = fastMnd / (timerUke * 4.33);
+  const timepris       = (fastPerTime + stromPerTime + sjaforJustert) * (1 + konsernPct) * (1 + paslagPct);
+  return timepris;
+}
+
+function sendEmail() {
+  const subject = encodeURIComponent('Varebil timespris – utregning');
+  const body    = encodeURIComponent(buildEmailBody());
+  window.location.href = `mailto:?subject=${subject}&body=${body}`;
+}
+
+function shareKollega() {
+  const url     = stateToUrl();
+  const subject = encodeURIComponent('Varebilkalkulator – se utregningen min');
+  const body    = encodeURIComponent(
+    `Hei!\n\nJeg har laget en utregning av timespris for varebil. Trykk på lenken for å se alle detaljer:\n\n${url}\n\nMvh`
+  );
+  window.location.href = `mailto:?subject=${subject}&body=${body}`;
+}
+
+// ─── Toast ────────────────────────────────────────────────────────────────────
+
+let toastTimer = null;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+// ─── Event listeners ──────────────────────────────────────────────────────────
+
+function attachListeners() {
+  const ids = [
+    'leasing','forsikring','bompenger','service','skade','kontor',
+    'km-uke','forbruk','strompris',
+    'sjafor-kost','sosiale-pct','timer-uke',
+    'konsern-pct','paslag-pct',
+    'sl-leasing','sl-forsikring','sl-kontor'
+  ];
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener('input', () => { recalc(); saveState(); });
+    }
+  });
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+
+(function init() {
+  // Try URL first, then localStorage, then defaults
+  let loaded = loadFromUrl();
+  if (!loaded) {
+    try {
+      const saved = localStorage.getItem('vpk_v2');
+      if (saved) {
+        applyState(JSON.parse(saved));
+        loaded = true;
+      }
+    } catch(e) {}
+  }
+  if (!loaded) {
+    applyState(DEFAULTS);
+  }
+
+  attachListeners();
+  recalc();
+})();
+</script>
+</body>
+</html>
