@@ -1051,7 +1051,6 @@ function applyState(state) {
   setVal('service', state.service ?? DEFAULTS.service);
   setVal('skade', state.skade ?? DEFAULTS.skade);
   setVal('kontor', state.kontor ?? DEFAULTS.kontor);
-  // backward compat: if old state had slLeasing, use that as slKapital
   const kapital = state.slKapital ?? state.slLeasing ?? DEFAULTS.slKapital;
   setVal('sl-kapital', kapital);
   setVal('km-uke', state.kmUke ?? DEFAULTS.kmUke);
@@ -1174,7 +1173,6 @@ function setSelectedDays(days) {
 }
 
 function onDayChange() {
-  // sync active class
   document.querySelectorAll('#day-selector input[type="checkbox"]').forEach(cb => {
     cb.closest('.day-btn').classList.toggle('active', cb.checked);
   });
@@ -1188,7 +1186,7 @@ function calcTimerUke() {
   const [fh, fm] = fra.split(':').map(Number);
   const [th, tm] = til.split(':').map(Number);
   let mins = (th * 60 + tm) - (fh * 60 + fm);
-  if (mins < 0) mins += 24 * 60; // overnight shift
+  if (mins < 0) mins += 24 * 60;
   const hoursPerDay = mins / 60;
   const days = getSelectedDays().length;
   return { hoursPerDay, timerUke: hoursPerDay * days };
@@ -1241,17 +1239,14 @@ function recalc() {
   const { hoursPerDay, timerUke: timerUkeRaw } = calcTimerUke();
   const timerUke     = timerUkeRaw || 1;
   const virkedager   = numVal('virkedager') || 230;
-  // virkedager/år ÷ 5 dager/uke ÷ 12 mnd = effektive uker per mnd
   const mndFaktor    = virkedager / 60;
 
-  // Update time display
   setText('r-timer-dag', fmtDec(hoursPerDay, 1));
   setText('r-timer-uke-display', fmtDec(timerUkeRaw, 1));
 
   const konsernPct   = numVal('konsern-pct') / 100;
   const paslagPct    = numVal('paslag-pct') / 100;
 
-  // Update single capital slider display
   const kapitalpott  = leasing + forsikring + kontor;
   const kapitalInkl  = kapitalpott * slKapital;
   const kapitalEkskl = kapitalpott - kapitalInkl;
@@ -1261,7 +1256,6 @@ function recalc() {
   setText('sl-kapital-inkl', fmt(kapitalInkl) + '/mnd');
   setText('sl-kapital-ekskl', fmt(kapitalEkskl) + '/mnd');
 
-  // Capital-adjusted fixed costs per month
   const leasingInkl    = leasing * slKapital;
   const forsikringInkl = forsikring * slKapital;
   const kontorInkl     = kontor * slKapital;
@@ -1271,7 +1265,6 @@ function recalc() {
   const fastMnd = leasingInkl + forsikringInkl + bompenger + service + skade + kontorInkl + egneSum;
   setText('r-fast-total', fmt(fastMnd) + '/mnd');
 
-  // Electricity
   const kwhPerUke   = (kmUke / 10) * forbruk;
   const kwhPerMnd   = kwhPerUke * mndFaktor;
   const kwhPerAr    = kwhPerUke * (virkedager / 5);
@@ -1284,7 +1277,6 @@ function recalc() {
   setText('r-strom-mnd', fmt(stromMnd) + '/mnd');
   setText('r-strom-time', fmtDec(stromPerTime, 1) + ' kr/time');
 
-  // Driver
   const sosialeKrPerTime   = sjaforKost * (sosialePct / 100);
   const sjaforJustert      = sjaforKost * (1 + sosialePct / 100);
   const sjaforMnd          = sjaforJustert * timerMnd;
@@ -1293,16 +1285,13 @@ function recalc() {
   setText('r-timer-mnd', fmtDec(timerMnd, 1) + ' t/mnd');
   setText('r-sjafor-mnd', fmt(sjaforMnd) + '/mnd');
 
-  // Surcharge
   const totPaslag = ((1 + konsernPct) * (1 + paslagPct) - 1) * 100;
   setText('r-paslag-total', fmtDec(totPaslag, 1) + ' %');
 
-  // Hourly price
   const fastPerTime  = timerMnd > 0 ? fastMnd / timerMnd : 0;
   const timeprisbas  = (fastPerTime + stromPerTime + sjaforJustert);
   const timepris     = timeprisbas * (1 + konsernPct) * (1 + paslagPct);
 
-  // Breakdown (per time)
   const fastKomponent    = fastPerTime;
   const stromKomponent   = stromPerTime;
   const sjaforKomponent  = sjaforKost;
@@ -1312,7 +1301,6 @@ function recalc() {
   const paslagKomponent  = (baseForPaslag + konsernKomponent) * paslagPct;
   const totalComponents  = fastKomponent + stromKomponent + sjaforKomponent + sosialeKomponent + konsernKomponent + paslagKomponent;
 
-  // Bar chart
   const barSegs = [
     { id: 'bar-leasing', val: fastKomponent },
     { id: 'bar-strom',   val: stromKomponent },
@@ -1332,7 +1320,6 @@ function recalc() {
     }
   });
 
-  // Results
   const ukeTimer = timerUke;
   const mndTimer = timerMnd;
   const arTimer  = timerMnd * 12;
@@ -1373,7 +1360,8 @@ function buildEmailBody() {
   const state = gatherState();
   const url   = stateToUrl();
 
-  const timerUke  = state.timerUke || 1;
+  const { timerUke: timerUkeRaw } = calcTimerUke();
+  const timerUke  = timerUkeRaw || 1;
   const vdager    = state.virkedager ?? 230;
   const mndTimer  = timerUke * (vdager / 60);
 
@@ -1505,7 +1493,6 @@ function attachListeners() {
 // ─── Init ─────────────────────────────────────────────────────────────────────
 
 (function init() {
-  // Try URL first, then localStorage, then defaults
   let loaded = loadFromUrl();
   if (!loaded) {
     try {
