@@ -717,6 +717,19 @@
 
       <div class="computed-box">
         <div class="row">
+          <span class="key">kWh per uke</span>
+          <span class="val" id="r-strom-kwh-uke">0 kWh</span>
+        </div>
+        <div class="row">
+          <span class="key">kWh per måned</span>
+          <span class="val" id="r-strom-kwh-mnd">0 kWh</span>
+        </div>
+        <div class="row">
+          <span class="key">kWh per år</span>
+          <span class="val" id="r-strom-kwh-ar">0 kWh</span>
+        </div>
+        <div class="section-divider"></div>
+        <div class="row">
           <span class="key">Strømkostnad per måned</span>
           <span class="val" id="r-strom-mnd">0 kr/mnd</span>
         </div>
@@ -761,6 +774,16 @@
           <span class="suffix-text">t/uke</span>
         </div>
       </div>
+      <div class="form-row">
+        <div>
+          <label>Virkedager per år</label>
+          <div class="hint">Norge: 260 dager − 5 uker ferie − ~10 helligdager = 230</div>
+        </div>
+        <div class="input-suffix">
+          <input type="number" id="virkedager" value="230" min="1" max="365" step="1">
+          <span class="suffix-text">dager</span>
+        </div>
+      </div>
 
       <div class="computed-box">
         <div class="row">
@@ -772,6 +795,10 @@
           <span class="val" id="r-sjafor-justert">0 kr/time</span>
         </div>
         <div class="section-divider"></div>
+        <div class="row">
+          <span class="key">Effektive timer per måned</span>
+          <span class="val" id="r-timer-mnd">0 t/mnd</span>
+        </div>
         <div class="row">
           <span class="key">Sjåførkostnad per måned</span>
           <span class="val" id="r-sjafor-mnd">0 kr/mnd</span>
@@ -850,6 +877,7 @@ const DEFAULTS = {
   sjaforKost: 350,
   sosialePct: 25,
   timerUke: 37.5,
+  virkedager: 230,
   konsernPct: 5,
   paslagPct: 15,
   egneKostnader: []
@@ -862,7 +890,7 @@ let egneIdCounter = 0;
 
 function saveState() {
   const state = gatherState();
-  try { localStorage.setItem('vpk_v2', JSON.stringify(state)); } catch(e) {}
+  try { localStorage.setItem('vpk_v3', JSON.stringify(state)); } catch(e) {}
 }
 
 function gatherState() {
@@ -880,6 +908,7 @@ function gatherState() {
     sjaforKost: numVal('sjafor-kost'),
     sosialePct: numVal('sosiale-pct'),
     timerUke: numVal('timer-uke'),
+    virkedager: numVal('virkedager'),
     konsernPct: numVal('konsern-pct'),
     paslagPct: numVal('paslag-pct'),
     egneKostnader: egneKostnader.map(e => ({ navn: e.navn, belop: e.belop }))
@@ -902,6 +931,7 @@ function applyState(state) {
   setVal('sjafor-kost', state.sjaforKost ?? DEFAULTS.sjaforKost);
   setVal('sosiale-pct', state.sosialePct ?? DEFAULTS.sosialePct);
   setVal('timer-uke', state.timerUke ?? DEFAULTS.timerUke);
+  setVal('virkedager', state.virkedager ?? DEFAULTS.virkedager);
   setVal('konsern-pct', state.konsernPct ?? DEFAULTS.konsernPct);
   setVal('paslag-pct', state.paslagPct ?? DEFAULTS.paslagPct);
 
@@ -1034,6 +1064,9 @@ function recalc() {
   const sjaforKost   = numVal('sjafor-kost');
   const sosialePct   = numVal('sosiale-pct');
   const timerUke     = numVal('timer-uke') || 1;
+  const virkedager   = numVal('virkedager') || 230;
+  // virkedager/år ÷ 5 dager/uke ÷ 12 mnd = effektive uker per mnd
+  const mndFaktor    = virkedager / 60;
 
   const konsernPct   = numVal('konsern-pct') / 100;
   const paslagPct    = numVal('paslag-pct') / 100;
@@ -1059,18 +1092,25 @@ function recalc() {
   setText('r-fast-total', fmt(fastMnd) + '/mnd');
 
   // Electricity
-  const kwhPerMnd   = (kmUke / 10) * forbruk * 4.33;
+  const kwhPerUke   = (kmUke / 10) * forbruk;
+  const kwhPerMnd   = kwhPerUke * mndFaktor;
+  const kwhPerAr    = kwhPerUke * (virkedager / 5);
   const stromMnd    = kwhPerMnd * strompris;
-  const stromPerTime = stromMnd / (timerUke * 4.33);
+  const timerMnd    = timerUke * mndFaktor;
+  const stromPerTime = timerMnd > 0 ? stromMnd / timerMnd : 0;
+  setText('r-strom-kwh-uke', fmtDec(kwhPerUke, 1) + ' kWh');
+  setText('r-strom-kwh-mnd', fmtDec(kwhPerMnd, 0) + ' kWh');
+  setText('r-strom-kwh-ar',  fmtDec(kwhPerAr, 0) + ' kWh');
   setText('r-strom-mnd', fmt(stromMnd) + '/mnd');
   setText('r-strom-time', fmtDec(stromPerTime, 1) + ' kr/time');
 
   // Driver
   const sosialeKrPerTime   = sjaforKost * (sosialePct / 100);
   const sjaforJustert      = sjaforKost * (1 + sosialePct / 100);
-  const sjaforMnd          = sjaforJustert * timerUke * 4.33;
+  const sjaforMnd          = sjaforJustert * timerMnd;
   setText('r-sosiale-kr', fmtDec(sosialeKrPerTime, 1) + ' kr/time');
   setText('r-sjafor-justert', fmtDec(sjaforJustert, 1) + ' kr/time');
+  setText('r-timer-mnd', fmtDec(timerMnd, 1) + ' t/mnd');
   setText('r-sjafor-mnd', fmt(sjaforMnd) + '/mnd');
 
   // Surcharge
@@ -1078,7 +1118,7 @@ function recalc() {
   setText('r-paslag-total', fmtDec(totPaslag, 1) + ' %');
 
   // Hourly price
-  const fastPerTime  = fastMnd / (timerUke * 4.33);
+  const fastPerTime  = timerMnd > 0 ? fastMnd / timerMnd : 0;
   const timeprisbas  = (fastPerTime + stromPerTime + sjaforJustert);
   const timepris     = timeprisbas * (1 + konsernPct) * (1 + paslagPct);
 
@@ -1105,8 +1145,8 @@ function recalc() {
 
   // Results
   const ukeTimer = timerUke;
-  const mndTimer = timerUke * 4.33;
-  const arTimer  = mndTimer * 12;
+  const mndTimer = timerMnd;
+  const arTimer  = timerMnd * 12;
 
   setText('r-timepris', fmtDec(timepris, 0) + ' ​kr/time');
   document.getElementById('r-timepris').innerHTML =
@@ -1144,8 +1184,9 @@ function buildEmailBody() {
   const state = gatherState();
   const url   = stateToUrl();
 
-  const timerUke = state.timerUke || 1;
-  const mndTimer = timerUke * 4.33;
+  const timerUke  = state.timerUke || 1;
+  const vdager    = state.virkedager ?? 230;
+  const mndTimer  = timerUke * (vdager / 60);
 
   const lines = [
     'VAREBIL PRISKALKULATOR – UTREGNING',
@@ -1172,6 +1213,7 @@ function buildEmailBody() {
     `  Sjåførkostnad:         ${state.sjaforKost} kr/time`,
     `  Sosiale kostnader:     ${state.sosialePct}%`,
     `  Kjøretimer per uke:    ${state.timerUke} t/uke`,
+    `  Virkedager per år:     ${state.virkedager ?? 230} dager`,
     '',
     'PÅSLAG',
     `  Konsernfelles:         ${state.konsernPct}%`,
@@ -1205,6 +1247,8 @@ function getTimepris() {
   const sjaforKost   = numVal('sjafor-kost');
   const sosialePct   = numVal('sosiale-pct');
   const timerUke     = numVal('timer-uke') || 1;
+  const virkedager   = numVal('virkedager') || 230;
+  const mndFaktor    = virkedager / 60;
   const konsernPct   = numVal('konsern-pct') / 100;
   const paslagPct    = numVal('paslag-pct') / 100;
 
@@ -1213,11 +1257,12 @@ function getTimepris() {
   const kontorInkl     = kontor * slKapital;
   const egneSum        = egneKostnader.reduce((s, e) => s + (e.belop || 0), 0);
   const fastMnd        = leasingInkl + forsikringInkl + bompenger + service + skade + kontorInkl + egneSum;
-  const kwhPerMnd      = (kmUke / 10) * forbruk * 4.33;
+  const timerMnd       = timerUke * mndFaktor;
+  const kwhPerMnd      = (kmUke / 10) * forbruk * mndFaktor;
   const stromMnd       = kwhPerMnd * strompris;
-  const stromPerTime   = stromMnd / (timerUke * 4.33);
+  const stromPerTime   = timerMnd > 0 ? stromMnd / timerMnd : 0;
   const sjaforJustert  = sjaforKost * (1 + sosialePct / 100);
-  const fastPerTime    = fastMnd / (timerUke * 4.33);
+  const fastPerTime    = timerMnd > 0 ? fastMnd / timerMnd : 0;
   const timepris       = (fastPerTime + stromPerTime + sjaforJustert) * (1 + konsernPct) * (1 + paslagPct);
   return timepris;
 }
@@ -1254,7 +1299,7 @@ function attachListeners() {
   const ids = [
     'leasing','forsikring','bompenger','service','skade','kontor',
     'km-uke','forbruk','strompris',
-    'sjafor-kost','sosiale-pct','timer-uke',
+    'sjafor-kost','sosiale-pct','timer-uke','virkedager',
     'konsern-pct','paslag-pct',
     'sl-kapital'
   ];
@@ -1273,7 +1318,7 @@ function attachListeners() {
   let loaded = loadFromUrl();
   if (!loaded) {
     try {
-      const saved = localStorage.getItem('vpk_v2');
+      const saved = localStorage.getItem('vpk_v3');
       if (saved) {
         applyState(JSON.parse(saved));
         loaded = true;
