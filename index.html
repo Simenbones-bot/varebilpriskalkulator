@@ -1439,7 +1439,7 @@ function buildEmailBody() {
     'SJÅFØR OG SOSIALE KOSTNADER',
     `  Sjåførkostnad:         ${state.sjaforKost} kr/time`,
     `  Sosiale kostnader:     ${state.sosialePct}%`,
-    `  Arbeidstid:            ${state.fraTid ?? '07:00'}–${state.tilTid ?? '16:00'}`,
+    `  Arbeidstid:            ${String(state.fraH ?? 7).padStart(2,'0')}:${String(state.fraM ?? 0).padStart(2,'0')}–${String(state.tilH ?? 16).padStart(2,'0')}:${String(state.tilM ?? 0).padStart(2,'0')}`,
     `  Fakturerbare dager:    ${(state.selectedDays ?? [0,1,2,3,4]).map(d => ['Man','Tir','Ons','Tor','Fre','Lør','Søn'][d]).join(', ')}`,
     `  Arbeidstimer per uke:  ${fmtDec(timerUke, 1)} t`,
     '',
