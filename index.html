@@ -560,21 +560,40 @@
   }
 
   input[type="time"] {
-    padding: 0.45rem 0.65rem;
-    border: 1px solid var(--border-strong);
-    border-radius: 6px;
-    font-size: 0.9rem;
-    font-family: inherit;
-    color: var(--text);
-    background: var(--bg);
-    transition: border-color 0.15s, box-shadow 0.15s;
-    width: 110px;
+    display: none; /* replaced by custom HH:MM inputs */
   }
 
-  input[type="time"]:focus {
-    outline: none;
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+  .time-input-group {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+    background: var(--bg);
+    overflow: hidden;
+  }
+
+  .time-h, .time-m {
+    width: 38px !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    text-align: center !important;
+    padding: 0.45rem 0.2rem !important;
+    background: transparent !important;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .time-h:focus, .time-m:focus {
+    outline: none !important;
+    box-shadow: inset 0 0 0 2px var(--accent) !important;
+  }
+
+  .time-sep {
+    color: var(--text-secondary);
+    font-weight: 700;
+    font-size: 1rem;
+    padding: 0 1px;
+    pointer-events: none;
   }
 
   .day-selector {
@@ -797,9 +816,12 @@
     </div>
     <div class="card-body">
       <div class="form-row">
-        <div><label>Kilometer per uke</label></div>
+        <div>
+          <label>Kilometer per dag</label>
+          <div class="hint">Kjørte kilometer på en arbeidsdag</div>
+        </div>
         <div class="input-suffix">
-          <input type="number" id="km-uke" value="500" min="0">
+          <input type="number" id="km-dag" value="100" min="0">
           <span class="suffix-text">km</span>
         </div>
       </div>
@@ -881,9 +903,17 @@
         <div style="display:flex;flex-direction:column;gap:0.5rem;align-items:flex-end">
           <div class="time-picker-row">
             <label>Fra</label>
-            <input type="time" id="fra-tid" value="07:00">
+            <div class="time-input-group">
+              <input type="number" class="time-h" id="fra-h" value="7" min="0" max="23" oninput="onTimeChange()">
+              <span class="time-sep">:</span>
+              <input type="number" class="time-m" id="fra-m" value="0" min="0" max="59" oninput="onTimeChange()">
+            </div>
             <label>til</label>
-            <input type="time" id="til-tid" value="16:00">
+            <div class="time-input-group">
+              <input type="number" class="time-h" id="til-h" value="16" min="0" max="23" oninput="onTimeChange()">
+              <span class="time-sep">:</span>
+              <input type="number" class="time-m" id="til-m" value="0" min="0" max="59" oninput="onTimeChange()">
+            </div>
           </div>
           <div class="day-selector" id="day-selector">
             <label class="day-btn active" title="Mandag"><input type="checkbox" value="0" checked onchange="onDayChange()">Man</label>
@@ -899,17 +929,6 @@
           </div>
         </div>
       </div>
-      <div class="form-row">
-        <div>
-          <label>Virkedager per år</label>
-          <div class="hint">Norge: 260 dager − 5 uker ferie − ~10 helligdager = 230</div>
-        </div>
-        <div class="input-suffix">
-          <input type="number" id="virkedager" value="230" min="1" max="365" step="1">
-          <span class="suffix-text">dager</span>
-        </div>
-      </div>
-
       <div class="computed-box">
         <div class="row">
           <span class="key">Sosiale kostnader</span>
@@ -996,15 +1015,14 @@ const DEFAULTS = {
   skade: 400,
   kontor: 600,
   slKapital: 100,
-  kmUke: 500,
+  kmDag: 100,
   forbruk: 2.5,
   strompris: 1.8,
   sjaforKost: 350,
   sosialePct: 25,
-  fraTid: '07:00',
-  tilTid: '16:00',
+  fraH: 7, fraM: 0,
+  tilH: 16, tilM: 0,
   selectedDays: [0,1,2,3,4],
-  virkedager: 230,
   konsernPct: 5,
   paslagPct: 15,
   egneKostnader: []
@@ -1029,15 +1047,16 @@ function gatherState() {
     skade: numVal('skade'),
     kontor: numVal('kontor'),
     slKapital: numVal('sl-kapital'),
-    kmUke: numVal('km-uke'),
+    kmDag: numVal('km-dag'),
     forbruk: numVal('forbruk'),
     strompris: numVal('strompris'),
     sjaforKost: numVal('sjafor-kost'),
     sosialePct: numVal('sosiale-pct'),
-    fraTid: document.getElementById('fra-tid')?.value || '07:00',
-    tilTid: document.getElementById('til-tid')?.value || '16:00',
+    fraH: parseInt(document.getElementById('fra-h')?.value) || 0,
+    fraM: parseInt(document.getElementById('fra-m')?.value) || 0,
+    tilH: parseInt(document.getElementById('til-h')?.value) || 16,
+    tilM: parseInt(document.getElementById('til-m')?.value) || 0,
     selectedDays: getSelectedDays(),
-    virkedager: numVal('virkedager'),
     konsernPct: numVal('konsern-pct'),
     paslagPct: numVal('paslag-pct'),
     egneKostnader: egneKostnader.map(e => ({ navn: e.navn, belop: e.belop }))
@@ -1054,15 +1073,29 @@ function applyState(state) {
   // backward compat: if old state had slLeasing, use that as slKapital
   const kapital = state.slKapital ?? state.slLeasing ?? DEFAULTS.slKapital;
   setVal('sl-kapital', kapital);
-  setVal('km-uke', state.kmUke ?? DEFAULTS.kmUke);
+  setVal('km-dag', state.kmDag ?? (state.kmUke ? Math.round(state.kmUke / 5) : DEFAULTS.kmDag));
   setVal('forbruk', state.forbruk ?? DEFAULTS.forbruk);
   setVal('strompris', state.strompris ?? DEFAULTS.strompris);
   setVal('sjafor-kost', state.sjaforKost ?? DEFAULTS.sjaforKost);
   setVal('sosiale-pct', state.sosialePct ?? DEFAULTS.sosialePct);
-  setVal('fra-tid', state.fraTid ?? DEFAULTS.fraTid);
-  setVal('til-tid', state.tilTid ?? DEFAULTS.tilTid);
+  // Support old fraTid/tilTid string format from earlier versions
+  if (state.fraH !== undefined) {
+    setVal('fra-h', state.fraH); setVal('fra-m', state.fraM ?? 0);
+  } else if (state.fraTid) {
+    const [h, m] = state.fraTid.split(':').map(Number);
+    setVal('fra-h', h); setVal('fra-m', m);
+  } else {
+    setVal('fra-h', DEFAULTS.fraH); setVal('fra-m', DEFAULTS.fraM);
+  }
+  if (state.tilH !== undefined) {
+    setVal('til-h', state.tilH); setVal('til-m', state.tilM ?? 0);
+  } else if (state.tilTid) {
+    const [h, m] = state.tilTid.split(':').map(Number);
+    setVal('til-h', h); setVal('til-m', m);
+  } else {
+    setVal('til-h', DEFAULTS.tilH); setVal('til-m', DEFAULTS.tilM);
+  }
   setSelectedDays(state.selectedDays ?? DEFAULTS.selectedDays);
-  setVal('virkedager', state.virkedager ?? DEFAULTS.virkedager);
   setVal('konsern-pct', state.konsernPct ?? DEFAULTS.konsernPct);
   setVal('paslag-pct', state.paslagPct ?? DEFAULTS.paslagPct);
 
@@ -1183,15 +1216,20 @@ function onDayChange() {
 }
 
 function calcTimerUke() {
-  const fra = document.getElementById('fra-tid')?.value || '07:00';
-  const til = document.getElementById('til-tid')?.value || '16:00';
-  const [fh, fm] = fra.split(':').map(Number);
-  const [th, tm] = til.split(':').map(Number);
-  let mins = (th * 60 + tm) - (fh * 60 + fm);
-  if (mins < 0) mins += 24 * 60; // overnight shift
+  const fraH = parseInt(document.getElementById('fra-h')?.value) || 0;
+  const fraM = parseInt(document.getElementById('fra-m')?.value) || 0;
+  const tilH = parseInt(document.getElementById('til-h')?.value) || 0;
+  const tilM = parseInt(document.getElementById('til-m')?.value) || 0;
+  let mins = (tilH * 60 + tilM) - (fraH * 60 + fraM);
+  if (mins < 0) mins += 24 * 60;
   const hoursPerDay = mins / 60;
   const days = getSelectedDays().length;
   return { hoursPerDay, timerUke: hoursPerDay * days };
+}
+
+function onTimeChange() {
+  recalc();
+  saveState();
 }
 
 // ─── Slider handler ───────────────────────────────────────────────────────────
@@ -1225,7 +1263,7 @@ function recalc() {
 
   const slKapital    = numVal('sl-kapital') / 100;
 
-  const kmUke        = numVal('km-uke');
+  const kmDag        = numVal('km-dag');
   const forbruk      = numVal('forbruk');
   const strompris    = numVal('strompris');
 
@@ -1240,9 +1278,8 @@ function recalc() {
   const sosialePct   = numVal('sosiale-pct');
   const { hoursPerDay, timerUke: timerUkeRaw } = calcTimerUke();
   const timerUke     = timerUkeRaw || 1;
-  const virkedager   = numVal('virkedager') || 230;
-  // virkedager/år ÷ 5 dager/uke ÷ 12 mnd = effektive uker per mnd
-  const mndFaktor    = virkedager / 60;
+  const selectedDaysCount = getSelectedDays().length;
+  const mndFaktor    = 4.33; // 52 uker / 12 mnd
 
   // Update time display
   setText('r-timer-dag', fmtDec(hoursPerDay, 1));
@@ -1272,9 +1309,10 @@ function recalc() {
   setText('r-fast-total', fmt(fastMnd) + '/mnd');
 
   // Electricity
-  const kwhPerUke   = (kmUke / 10) * forbruk;
+  const kwhPerDag   = (kmDag / 10) * forbruk;
+  const kwhPerUke   = kwhPerDag * selectedDaysCount;
   const kwhPerMnd   = kwhPerUke * mndFaktor;
-  const kwhPerAr    = kwhPerUke * (virkedager / 5);
+  const kwhPerAr    = kwhPerUke * 52;
   const stromMnd    = kwhPerMnd * strompris;
   const timerMnd    = timerUke * mndFaktor;
   const stromPerTime = timerMnd > 0 ? stromMnd / timerMnd : 0;
@@ -1373,9 +1411,9 @@ function buildEmailBody() {
   const state = gatherState();
   const url   = stateToUrl();
 
-  const timerUke  = state.timerUke || 1;
-  const vdager    = state.virkedager ?? 230;
-  const mndTimer  = timerUke * (vdager / 60);
+  const { timerUke: timerUkeCalc } = calcTimerUke();
+  const timerUke  = timerUkeCalc || 1;
+  const mndTimer  = timerUke * 4.33;
 
   const lines = [
     'VAREBIL PRISKALKULATOR – UTREGNING',
@@ -1394,7 +1432,7 @@ function buildEmailBody() {
     `  Kapitalandel (leasing + forsikring + kontor): ${state.slKapital}%`,
     '',
     'STRØM / DRIVSTOFF',
-    `  Km per uke:            ${state.kmUke} km`,
+    `  Km per dag:            ${state.kmDag} km`,
     `  Forbruk per 10 km:     ${state.forbruk} kWh`,
     `  Strømpris:             ${state.strompris} kr/kWh`,
     '',
@@ -1403,7 +1441,7 @@ function buildEmailBody() {
     `  Sosiale kostnader:     ${state.sosialePct}%`,
     `  Arbeidstid:            ${state.fraTid ?? '07:00'}–${state.tilTid ?? '16:00'}`,
     `  Fakturerbare dager:    ${(state.selectedDays ?? [0,1,2,3,4]).map(d => ['Man','Tir','Ons','Tor','Fre','Lør','Søn'][d]).join(', ')}`,
-    `  Virkedager per år:     ${state.virkedager ?? 230} dager`,
+    `  Arbeidstimer per uke:  ${fmtDec(timerUke, 1)} t`,
     '',
     'PÅSLAG',
     `  Konsernfelles:         ${state.konsernPct}%`,
@@ -1431,15 +1469,15 @@ function getTimepris() {
   const skade        = numVal('skade');
   const kontor       = numVal('kontor');
   const slKapital    = numVal('sl-kapital') / 100;
-  const kmUke        = numVal('km-uke');
+  const kmDag        = numVal('km-dag');
   const forbruk      = numVal('forbruk');
   const strompris    = numVal('strompris');
   const sjaforKost   = numVal('sjafor-kost');
   const sosialePct   = numVal('sosiale-pct');
   const { timerUke: timerUkeRaw } = calcTimerUke();
   const timerUke     = timerUkeRaw || 1;
-  const virkedager   = numVal('virkedager') || 230;
-  const mndFaktor    = virkedager / 60;
+  const selectedDaysCount = getSelectedDays().length;
+  const mndFaktor    = 4.33;
   const konsernPct   = numVal('konsern-pct') / 100;
   const paslagPct    = numVal('paslag-pct') / 100;
 
@@ -1449,7 +1487,7 @@ function getTimepris() {
   const egneSum        = egneKostnader.reduce((s, e) => s + (e.belop || 0), 0);
   const fastMnd        = leasingInkl + forsikringInkl + bompenger + service + skade + kontorInkl + egneSum;
   const timerMnd       = timerUke * mndFaktor;
-  const kwhPerMnd      = (kmUke / 10) * forbruk * mndFaktor;
+  const kwhPerMnd      = (kmDag * selectedDaysCount / 10) * forbruk * mndFaktor;
   const stromMnd       = kwhPerMnd * strompris;
   const stromPerTime   = timerMnd > 0 ? stromMnd / timerMnd : 0;
   const sjaforJustert  = sjaforKost * (1 + sosialePct / 100);
@@ -1489,8 +1527,8 @@ function showToast(msg) {
 function attachListeners() {
   const ids = [
     'leasing','forsikring','bompenger','service','skade','kontor',
-    'km-uke','forbruk','strompris',
-    'sjafor-kost','sosiale-pct','fra-tid','til-tid','virkedager',
+    'km-dag','forbruk','strompris',
+    'sjafor-kost','sosiale-pct','fra-h','fra-m','til-h','til-m',
     'konsern-pct','paslag-pct',
     'sl-kapital'
   ];
