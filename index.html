@@ -880,6 +880,16 @@
         </div>
       </div>
       <div class="form-row">
+        <div><label>Dekk / dekkhotell</label></div>
+        <div>
+          <div class="input-suffix">
+            <input type="number" id="dekk" value="300" min="0">
+            <span class="suffix-text">kr/mnd</span>
+          </div>
+          <div class="annual-hint" id="ar-dekk"></div>
+        </div>
+      </div>
+      <div class="form-row">
         <div><label>Skade / erstatninger</label></div>
         <div>
           <div class="input-suffix">
@@ -985,6 +995,15 @@
       </div>
 
       <div class="computed-box">
+        <div class="row">
+          <span class="key">Km per måned</span>
+          <span class="val" id="r-km-mnd">0 km</span>
+        </div>
+        <div class="row">
+          <span class="key">Km per år</span>
+          <span class="val" id="r-km-ar">0 km</span>
+        </div>
+        <div class="section-divider"></div>
         <div class="row">
           <span class="key">kWh per uke</span>
           <span class="val" id="r-strom-kwh-uke">0 kWh</span>
@@ -1165,6 +1184,7 @@ const DEFAULTS = {
   forsikring: 2500,
   bompenger: 500,
   service: 800,
+  dekk: 300,
   skade: 400,
   kontor: 600,
   slKapital: 100,
@@ -1197,6 +1217,7 @@ function gatherState() {
     forsikring: numVal('forsikring'),
     bompenger: numVal('bompenger'),
     service: numVal('service'),
+    dekk: numVal('dekk'),
     skade: numVal('skade'),
     kontor: numVal('kontor'),
     slKapital: numVal('sl-kapital'),
@@ -1221,6 +1242,7 @@ function applyState(state) {
   setVal('forsikring', state.forsikring ?? DEFAULTS.forsikring);
   setVal('bompenger', state.bompenger ?? DEFAULTS.bompenger);
   setVal('service', state.service ?? DEFAULTS.service);
+  setVal('dekk', state.dekk ?? DEFAULTS.dekk);
   setVal('skade', state.skade ?? DEFAULTS.skade);
   setVal('kontor', state.kontor ?? DEFAULTS.kontor);
   // backward compat: if old state had slLeasing, use that as slKapital
@@ -1293,12 +1315,21 @@ function setVal(id, val) {
   if (el) el.value = val;
 }
 
-function fmt(n) {
-  return Math.round(n).toLocaleString('nb-NO') + ' kr';
+function nbFmt(n, decimals) {
+  const d = decimals ?? 0;
+  const abs = Math.abs(n);
+  const fixed = abs.toFixed(d);
+  const [int, dec] = fixed.split('.');
+  const intStr = int.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  return (n < 0 ? '-' : '') + (d > 0 ? intStr + ',' + dec : intStr);
 }
 
-function fmtDec(n, d=0) {
-  return n.toLocaleString('nb-NO', { minimumFractionDigits: d, maximumFractionDigits: d });
+function fmt(n) {
+  return nbFmt(Math.round(n)) + ' kr';
+}
+
+function fmtDec(n, d) {
+  return nbFmt(n, d ?? 0);
 }
 
 // ─── Dynamic egne kostnader ───────────────────────────────────────────────────
@@ -1411,6 +1442,7 @@ function recalc() {
   const forsikring   = numVal('forsikring');
   const bompenger    = numVal('bompenger');
   const service      = numVal('service');
+  const dekk         = numVal('dekk');
   const skade        = numVal('skade');
   const kontor       = numVal('kontor');
 
@@ -1421,10 +1453,10 @@ function recalc() {
   const strompris    = numVal('strompris');
 
   // Annual cost hints for fixed costs
-  const arFields = ['leasing','forsikring','bompenger','service','skade','kontor'];
+  const arFields = ['leasing','forsikring','bompenger','service','dekk','skade','kontor'];
   arFields.forEach(id => {
     const el = document.getElementById('ar-' + id);
-    if (el) el.textContent = '= ' + Math.round(numVal(id) * 12).toLocaleString('nb-NO') + ' kr/år';
+    if (el) el.textContent = '= ' + nbFmt(Math.round(numVal(id) * 12)) + ' kr/år';
   });
 
   const sjaforKost   = numVal('sjafor-kost');
@@ -1459,7 +1491,7 @@ function recalc() {
 
   const egneSum = egneKostnader.reduce((s, e) => s + (e.belop || 0), 0);
 
-  const fastMnd = leasingInkl + forsikringInkl + bompenger + serviceInkl + skade + kontorInkl + egneSum;
+  const fastMnd = leasingInkl + forsikringInkl + bompenger + serviceInkl + dekk + skade + kontorInkl + egneSum;
   setText('r-fast-total', fmt(fastMnd) + '/mnd');
 
   // Electricity
@@ -1467,9 +1499,13 @@ function recalc() {
   const kwhPerUke   = kwhPerDag * selectedDaysCount;
   const kwhPerMnd   = kwhPerUke * mndFaktor;
   const kwhPerAr    = kwhPerUke * 52;
+  const kmPerMnd    = kmDag * selectedDaysCount * mndFaktor;
+  const kmPerAr     = kmDag * selectedDaysCount * 52;
   const stromMnd    = kwhPerMnd * strompris;
   const timerMnd    = timerUke * mndFaktor;
   const stromPerTime = timerMnd > 0 ? stromMnd / timerMnd : 0;
+  setText('r-km-mnd',      fmtDec(kmPerMnd, 0) + ' km');
+  setText('r-km-ar',       fmtDec(kmPerAr, 0) + ' km');
   setText('r-strom-kwh-uke', fmtDec(kwhPerUke, 1) + ' kWh');
   setText('r-strom-kwh-mnd', fmtDec(kwhPerMnd, 0) + ' kWh');
   setText('r-strom-kwh-ar',  fmtDec(kwhPerAr, 0) + ' kWh');
@@ -1549,6 +1585,7 @@ function buildDetailData() {
   const forsikring = numVal('forsikring');
   const bompenger  = numVal('bompenger');
   const service    = numVal('service');
+  const dekk       = numVal('dekk');
   const skade      = numVal('skade');
   const kontor     = numVal('kontor');
   const slK        = numVal('sl-kapital') / 100;
@@ -1569,7 +1606,7 @@ function buildDetailData() {
   const serviceInkl    = service * slK;
   const kontorInkl     = kontor * slK;
   const egneSum        = egneKostnader.reduce((s, e) => s + (e.belop || 0), 0);
-  const fastMnd        = leasingInkl + forsikringInkl + bompenger + serviceInkl + skade + kontorInkl + egneSum;
+  const fastMnd        = leasingInkl + forsikringInkl + bompenger + serviceInkl + dekk + skade + kontorInkl + egneSum;
   const timerMnd       = timerUke * mndFaktor;
   const dagTimer       = hoursPerDay;
   const kwhPerMnd      = (kmDag * selDays / 10) * forbruk * mndFaktor;
@@ -1583,7 +1620,7 @@ function buildDetailData() {
   const paslagKr       = (subtotal + konsernKr) * paslagPct;
   const timepris       = subtotal + konsernKr + paslagKr;
 
-  return { leasing, forsikring, bompenger, service, skade, kontor, slK,
+  return { leasing, forsikring, bompenger, service, dekk, skade, kontor, slK,
     leasingInkl, forsikringInkl, serviceInkl, kontorInkl, fastMnd,
     timerMnd, timerUke, dagTimer, stromMnd, stromPerTime,
     sjaforKost, sosialeKr, sjaforJustert, fastPerTime,
@@ -1620,6 +1657,7 @@ function showDetailView() {
   rows += mkRow(`Leasing`, d.leasingInkl, t>0?d.leasingInkl/t:0, t>0?d.leasingInkl/t*g:0);
   rows += mkRow(`Forsikring`, d.forsikringInkl, t>0?d.forsikringInkl/t:0, t>0?d.forsikringInkl/t*g:0);
   rows += mkRow(`Service / vedlikehold`, d.serviceInkl, t>0?d.serviceInkl/t:0, t>0?d.serviceInkl/t*g:0);
+  rows += mkRow(`Dekk / dekkhotell`, d.dekk, t>0?d.dekk/t:0, t>0?d.dekk/t*g:0);
   rows += mkRow(`Bompenger`, d.bompenger, t>0?d.bompenger/t:0, t>0?d.bompenger/t*g:0);
   rows += mkRow(`Skade / erstatninger`, d.skade, t>0?d.skade/t:0, t>0?d.skade/t*g:0);
   rows += mkRow(`Kontor / parkering`, d.kontorInkl, t>0?d.kontorInkl/t:0, t>0?d.kontorInkl/t*g:0);
@@ -1752,6 +1790,7 @@ function buildEmailBody() {
     erow(`  Leasing`,              d.leasingInkl,    t>0?d.leasingInkl/t:0,    t>0?d.leasingInkl/t*g:0),
     erow(`  Forsikring`,           d.forsikringInkl, t>0?d.forsikringInkl/t:0, t>0?d.forsikringInkl/t*g:0),
     erow(`  Service / vedlikehold`,d.serviceInkl,    t>0?d.serviceInkl/t:0,    t>0?d.serviceInkl/t*g:0),
+    erow(`  Dekk / dekkhotell`,   d.dekk,           t>0?d.dekk/t:0,           t>0?d.dekk/t*g:0),
     erow(`  Bompenger`,            d.bompenger,      t>0?d.bompenger/t:0,      t>0?d.bompenger/t*g:0),
     erow(`  Skade / erstatninger`, d.skade,          t>0?d.skade/t:0,          t>0?d.skade/t*g:0),
     erow(`  Kontor / parkering`,   d.kontorInkl,     t>0?d.kontorInkl/t:0,     t>0?d.kontorInkl/t*g:0),
@@ -1805,8 +1844,9 @@ function getTimepris() {
   const forsikringInkl = forsikring * slKapital;
   const serviceInkl    = service * slKapital;
   const kontorInkl     = kontor * slKapital;
+  const dekk           = numVal('dekk');
   const egneSum        = egneKostnader.reduce((s, e) => s + (e.belop || 0), 0);
-  const fastMnd        = leasingInkl + forsikringInkl + bompenger + serviceInkl + skade + kontorInkl + egneSum;
+  const fastMnd        = leasingInkl + forsikringInkl + bompenger + serviceInkl + dekk + skade + kontorInkl + egneSum;
   const timerMnd       = timerUke * mndFaktor;
   const kwhPerMnd      = (kmDag * selectedDaysCount / 10) * forbruk * mndFaktor;
   const stromMnd       = kwhPerMnd * strompris;
@@ -1847,7 +1887,7 @@ function showToast(msg) {
 
 function attachListeners() {
   const ids = [
-    'leasing','forsikring','bompenger','service','skade','kontor',
+    'leasing','forsikring','bompenger','service','dekk','skade','kontor',
     'km-dag','forbruk','strompris',
     'sjafor-kost','sosiale-pct','fra-h','fra-m','til-h','til-m',
     'konsern-pct','paslag-pct',
