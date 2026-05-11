@@ -638,6 +638,147 @@
     .dynamic-row { grid-template-columns: 1fr auto; }
     .dynamic-row input[type="number"] { width: 100%; }
     .dynamic-row input[type="text"].name-input { grid-column: 1 / -1; }
+    .detail-summary { grid-template-columns: 1fr 1fr; }
+  }
+
+  /* Detail view modal */
+  .detail-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    z-index: 50;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 2rem 1rem;
+    overflow-y: auto;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+  }
+
+  .detail-overlay.show { opacity: 1; pointer-events: all; }
+
+  .detail-modal {
+    background: var(--surface);
+    border-radius: var(--radius);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    width: 100%;
+    max-width: 700px;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  .detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem 1.5rem;
+    background: var(--text);
+    color: #fff;
+  }
+
+  .detail-header h2 { font-size: 1rem; font-weight: 600; letter-spacing: -0.01em; }
+
+  .detail-close {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 1.5rem;
+    cursor: pointer;
+    line-height: 1;
+    opacity: 0.7;
+    padding: 0 0.25rem;
+    transition: opacity 0.15s;
+  }
+
+  .detail-close:hover { opacity: 1; }
+
+  .detail-body { padding: 1.5rem; overflow-x: auto; }
+
+  .detail-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.86rem;
+  }
+
+  .detail-table th {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-secondary);
+    border-bottom: 2px solid var(--border);
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  .detail-table th:first-child { text-align: left; }
+
+  .detail-table td {
+    padding: 0.4rem 0.6rem;
+    border-bottom: 1px solid var(--border);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .detail-table td:first-child { text-align: left; color: var(--text-secondary); white-space: normal; }
+
+  .detail-table tr.section-header td {
+    background: var(--bg);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-secondary);
+    font-weight: 600;
+    padding: 0.7rem 0.6rem 0.25rem;
+    border-bottom: none;
+  }
+
+  .detail-table tr.subtotal-row td {
+    font-weight: 600;
+    border-top: 2px solid var(--border-strong);
+    background: var(--bg);
+  }
+
+  .detail-table tr.total-row td {
+    font-weight: 700;
+    font-size: 0.95rem;
+    background: var(--text);
+    color: #fff;
+    border: none;
+    padding: 0.65rem 0.6rem;
+  }
+
+  .detail-summary {
+    margin-top: 1.25rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 0.75rem;
+  }
+
+  .detail-sum-item {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+  }
+
+  .detail-sum-label {
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    display: block;
+    margin-bottom: 0.2rem;
+  }
+
+  .detail-sum-val {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text);
+    display: block;
   }
 </style>
 </head>
@@ -779,7 +920,7 @@
     </div>
     <div class="card-body">
       <p style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:1rem;">
-        Velg hvor stor andel av kapitalkostnadene (leasing + forsikring + kontor/parkering) som skal inngå i timeprisberegningen. Resten ignoreres.
+        Velg hvor stor andel av kapitalkostnadene (leasing + forsikring + service + kontor/parkering) som skal inngå i timeprisberegningen. Resten ignoreres.
       </p>
 
       <div class="slider-row" style="border-bottom:none">
@@ -794,7 +935,7 @@
 
       <div class="computed-box" style="margin-top:0.75rem">
         <div class="row">
-          <span class="key">Samlet kapitalpott (leasing + forsikring + kontor)</span>
+          <span class="key">Samlet kapitalpott (leasing + forsikring + service + kontor)</span>
           <span class="val" id="sl-kapital-total">0 kr/mnd</span>
         </div>
         <div class="row">
@@ -993,7 +1134,8 @@
       <h2>Del og eksporter</h2>
     </div>
     <div class="actions-row">
-      <button class="btn btn-primary" onclick="copyLink()">Kopier lenke</button>
+      <button class="btn btn-primary" onclick="showDetailView()">Detaljert visning</button>
+      <button class="btn btn-secondary" onclick="copyLink()">Kopier lenke</button>
       <button class="btn btn-secondary" onclick="sendEmail()">Send utregning på e-post</button>
       <button class="btn btn-secondary" onclick="shareKollega()">Del med kollega</button>
       <button class="btn btn-danger" onclick="resetAll()">Nullstill</button>
@@ -1003,6 +1145,17 @@
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- DETAIL VIEW MODAL -->
+<div class="detail-overlay" id="detail-overlay" onclick="closeDetailView(event)">
+  <div class="detail-modal">
+    <div class="detail-header">
+      <h2>Detaljert kostnadsfordeling</h2>
+      <button class="detail-close" onclick="closeDetailView()">×</button>
+    </div>
+    <div class="detail-body" id="detail-body"></div>
+  </div>
+</div>
 
 <script>
 // ─── State & Defaults ────────────────────────────────────────────────────────
@@ -1289,7 +1442,7 @@ function recalc() {
   const paslagPct    = numVal('paslag-pct') / 100;
 
   // Update single capital slider display
-  const kapitalpott  = leasing + forsikring + kontor;
+  const kapitalpott  = leasing + forsikring + service + kontor;
   const kapitalInkl  = kapitalpott * slKapital;
   const kapitalEkskl = kapitalpott - kapitalInkl;
   setText('sl-kapital-pct', Math.round(numVal('sl-kapital')));
@@ -1301,11 +1454,12 @@ function recalc() {
   // Capital-adjusted fixed costs per month
   const leasingInkl    = leasing * slKapital;
   const forsikringInkl = forsikring * slKapital;
+  const serviceInkl    = service * slKapital;
   const kontorInkl     = kontor * slKapital;
 
   const egneSum = egneKostnader.reduce((s, e) => s + (e.belop || 0), 0);
 
-  const fastMnd = leasingInkl + forsikringInkl + bompenger + service + skade + kontorInkl + egneSum;
+  const fastMnd = leasingInkl + forsikringInkl + bompenger + serviceInkl + skade + kontorInkl + egneSum;
   setText('r-fast-total', fmt(fastMnd) + '/mnd');
 
   // Electricity
@@ -1388,6 +1542,147 @@ function setText(id, val) {
   if (el) el.textContent = val;
 }
 
+// ─── Detail view ─────────────────────────────────────────────────────────────
+
+function buildDetailData() {
+  const leasing    = numVal('leasing');
+  const forsikring = numVal('forsikring');
+  const bompenger  = numVal('bompenger');
+  const service    = numVal('service');
+  const skade      = numVal('skade');
+  const kontor     = numVal('kontor');
+  const slK        = numVal('sl-kapital') / 100;
+  const kmDag      = numVal('km-dag');
+  const forbruk    = numVal('forbruk');
+  const strompris  = numVal('strompris');
+  const sjaforKost = numVal('sjafor-kost');
+  const sosialePct = numVal('sosiale-pct');
+  const { hoursPerDay, timerUke: timerUkeRaw } = calcTimerUke();
+  const timerUke   = timerUkeRaw || 1;
+  const selDays    = getSelectedDays().length || 1;
+  const mndFaktor  = 4.33;
+  const konsernPct = numVal('konsern-pct') / 100;
+  const paslagPct  = numVal('paslag-pct') / 100;
+
+  const leasingInkl    = leasing * slK;
+  const forsikringInkl = forsikring * slK;
+  const serviceInkl    = service * slK;
+  const kontorInkl     = kontor * slK;
+  const egneSum        = egneKostnader.reduce((s, e) => s + (e.belop || 0), 0);
+  const fastMnd        = leasingInkl + forsikringInkl + bompenger + serviceInkl + skade + kontorInkl + egneSum;
+  const timerMnd       = timerUke * mndFaktor;
+  const dagTimer       = hoursPerDay;
+  const kwhPerMnd      = (kmDag * selDays / 10) * forbruk * mndFaktor;
+  const stromMnd       = kwhPerMnd * strompris;
+  const stromPerTime   = timerMnd > 0 ? stromMnd / timerMnd : 0;
+  const sjaforJustert  = sjaforKost * (1 + sosialePct / 100);
+  const sosialeKr      = sjaforKost * (sosialePct / 100);
+  const fastPerTime    = timerMnd > 0 ? fastMnd / timerMnd : 0;
+  const subtotal       = fastPerTime + stromPerTime + sjaforJustert;
+  const konsernKr      = subtotal * konsernPct;
+  const paslagKr       = (subtotal + konsernKr) * paslagPct;
+  const timepris       = subtotal + konsernKr + paslagKr;
+
+  return { leasing, forsikring, bompenger, service, skade, kontor, slK,
+    leasingInkl, forsikringInkl, serviceInkl, kontorInkl, fastMnd,
+    timerMnd, timerUke, dagTimer, stromMnd, stromPerTime,
+    sjaforKost, sosialeKr, sjaforJustert, fastPerTime,
+    subtotal, konsernKr, paslagKr, timepris,
+    konsernPct, paslagPct };
+}
+
+function showDetailView() {
+  const d = buildDetailData();
+  const { timerMnd, timerUke, dagTimer } = d;
+
+  function pct(n) { return Math.round(n * 100); }
+  function kr(n)  { return fmtDec(n, 0) + ' kr'; }
+  function krd(n) { return fmtDec(n, 2) + ' kr'; }
+
+  function mkRow(label, mndVal, timeVal, dagVal, cls) {
+    const mndStr  = mndVal  !== null ? kr(mndVal)  : '';
+    const timeStr = timeVal !== null ? krd(timeVal) : '';
+    const dagStr  = dagVal  !== null ? kr(dagVal)   : '';
+    const c = cls ? ` class="${cls}"` : '';
+    return `<tr${c}><td>${label}</td><td>${mndStr}</td><td>${timeStr}</td><td>${dagStr}</td></tr>`;
+  }
+
+  function secRow(label) {
+    return `<tr class="section-header"><td colspan="4">${label}</td></tr>`;
+  }
+
+  const t = timerMnd;
+  const g = dagTimer;
+  const slPct = pct(d.slK);
+
+  let rows = '';
+  rows += secRow(`Faste kostnader (kapitalandel ${slPct}%)`);
+  rows += mkRow(`Leasing`, d.leasingInkl, t>0?d.leasingInkl/t:0, t>0?d.leasingInkl/t*g:0);
+  rows += mkRow(`Forsikring`, d.forsikringInkl, t>0?d.forsikringInkl/t:0, t>0?d.forsikringInkl/t*g:0);
+  rows += mkRow(`Service / vedlikehold`, d.serviceInkl, t>0?d.serviceInkl/t:0, t>0?d.serviceInkl/t*g:0);
+  rows += mkRow(`Bompenger`, d.bompenger, t>0?d.bompenger/t:0, t>0?d.bompenger/t*g:0);
+  rows += mkRow(`Skade / erstatninger`, d.skade, t>0?d.skade/t:0, t>0?d.skade/t*g:0);
+  rows += mkRow(`Kontor / parkering`, d.kontorInkl, t>0?d.kontorInkl/t:0, t>0?d.kontorInkl/t*g:0);
+  egneKostnader.forEach(e => {
+    if (e.belop > 0) rows += mkRow(e.navn || 'Kostnad', e.belop, t>0?e.belop/t:0, t>0?e.belop/t*g:0);
+  });
+  rows += secRow('Strøm / drivstoff');
+  rows += mkRow('Strøm', d.stromMnd, d.stromPerTime, d.stromPerTime*g);
+  rows += secRow('Sjåfør og sosiale kostnader');
+  rows += mkRow('Sjåfør (bruttolønn)', null, d.sjaforKost, d.sjaforKost*g);
+  rows += mkRow(`Sosiale kostnader (${numVal('sosiale-pct')}%)`, null, d.sosialeKr, d.sosialeKr*g);
+  rows += mkRow('Subtotal (uten påslag)', null, d.subtotal, d.subtotal*g, 'subtotal-row');
+  rows += secRow('Påslag');
+  rows += mkRow(`Konsernfelles (${numVal('konsern-pct')}%)`, null, d.konsernKr, d.konsernKr*g);
+  rows += mkRow(`Påslag / fortjeneste (${numVal('paslag-pct')}%)`, null, d.paslagKr, d.paslagKr*g);
+  rows += mkRow('TIMESPRIS', null, d.timepris, d.timepris*g, 'total-row');
+
+  const html = `
+    <p style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:1.25rem">
+      Beregnet på <strong>${fmtDec(timerMnd,1)} effektive timer/mnd</strong>
+      (${fmtDec(timerUke,1)} t/uke &times; ${4.33} mnd-faktor)
+    </p>
+    <table class="detail-table">
+      <thead><tr>
+        <th style="text-align:left">Kostnad</th>
+        <th>Kr/mnd</th><th>Kr/time</th><th>Kr/dag</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <div class="detail-summary">
+      <div class="detail-sum-item">
+        <span class="detail-sum-label">Timespris</span>
+        <span class="detail-sum-val">${fmtDec(d.timepris,0)} kr</span>
+      </div>
+      <div class="detail-sum-item">
+        <span class="detail-sum-label">Per dag (${fmtDec(g,1)} t)</span>
+        <span class="detail-sum-val">${fmtDec(d.timepris*g,0)} kr</span>
+      </div>
+      <div class="detail-sum-item">
+        <span class="detail-sum-label">Per uke</span>
+        <span class="detail-sum-val">${fmtDec(d.timepris*timerUke,0)} kr</span>
+      </div>
+      <div class="detail-sum-item">
+        <span class="detail-sum-label">Per måned</span>
+        <span class="detail-sum-val">${fmtDec(d.timepris*timerMnd,0)} kr</span>
+      </div>
+      <div class="detail-sum-item">
+        <span class="detail-sum-label">Per år</span>
+        <span class="detail-sum-val">${fmtDec(d.timepris*timerMnd*12,0)} kr</span>
+      </div>
+    </div>`;
+
+  document.getElementById('detail-body').innerHTML = html;
+  document.getElementById('detail-overlay').classList.add('show');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeDetailView(e) {
+  if (e && e.target !== document.getElementById('detail-overlay')) return;
+  document.getElementById('detail-overlay').classList.remove('show');
+  document.body.style.overflow = '';
+}
+
 // ─── Actions ──────────────────────────────────────────────────────────────────
 
 function resetAll() {
@@ -1410,51 +1705,76 @@ function copyLink() {
 function buildEmailBody() {
   const state = gatherState();
   const url   = stateToUrl();
+  const d     = buildDetailData();
+  const { timerMnd, timerUke, dagTimer } = d;
 
-  const { timerUke: timerUkeCalc } = calcTimerUke();
-  const timerUke  = timerUkeCalc || 1;
-  const mndTimer  = timerUke * 4.33;
+  const tidFra = `${String(state.fraH??7).padStart(2,'0')}:${String(state.fraM??0).padStart(2,'0')}`;
+  const tidTil = `${String(state.tilH??16).padStart(2,'0')}:${String(state.tilM??0).padStart(2,'0')}`;
+  const dagerStr = (state.selectedDays ?? [0,1,2,3,4])
+    .map(i => ['Man','Tir','Ons','Tor','Fre','Lør','Søn'][i]).join(', ');
+  const slPct = Math.round(d.slK * 100);
+
+  const W = 72;
+  const SEP = '='.repeat(W);
+  const sep = '-'.repeat(W);
+
+  // Column-aligned row: label(34) | mnd(13r) | time(12r) | dag(12r)
+  function erow(label, mndVal, timeVal, dagVal) {
+    const pad = (s, w) => String(s).padStart(w);
+    const mndS  = mndVal  !== null ? fmtDec(mndVal,  0) + ' kr' : '';
+    const timeS = timeVal !== null ? fmtDec(timeVal, 2) + ' kr' : '';
+    const dagS  = dagVal  !== null ? fmtDec(dagVal,  0) + ' kr' : '';
+    return `  ${label.padEnd(34)}${pad(mndS,13)}${pad(timeS,12)}${pad(dagS,12)}`;
+  }
+
+  function erowHead() {
+    return `  ${'Kostnad'.padEnd(34)}${'Kr/mnd'.padStart(13)}${'Kr/time'.padStart(12)}${'Kr/dag'.padStart(12)}`;
+  }
+
+  const t = timerMnd;
+  const g = dagTimer;
 
   const lines = [
-    'VAREBIL PRISKALKULATOR – UTREGNING',
-    '='.repeat(40),
+    SEP,
+    '  VAREBIL PRISKALKULATOR — UTREGNING',
+    SEP,
     '',
-    'FASTE KOSTNADER (kr/mnd)',
-    `  Leasing:               ${fmt(state.leasing)}`,
-    `  Forsikring:            ${fmt(state.forsikring)}`,
-    `  Bompenger:             ${fmt(state.bompenger)}`,
-    `  Service/vedlikehold:   ${fmt(state.service)}`,
-    `  Skade/erstatninger:    ${fmt(state.skade)}`,
-    `  Kontor/parkering:      ${fmt(state.kontor)}`,
-    ...(state.egneKostnader.map(e => `  ${e.navn || 'Kostnad'}:  ${fmt(e.belop)}`)),
+    `  TIMESPRIS:   ${fmtDec(d.timepris, 0)} kr/time`,
+    `  Per dag:     ${fmtDec(d.timepris * g, 0)} kr  (${fmtDec(g,1)} t/dag)`,
+    `  Per uke:     ${fmtDec(d.timepris * timerUke, 0)} kr`,
+    `  Per måned:   ${fmtDec(d.timepris * timerMnd, 0)} kr  (${fmtDec(timerMnd,1)} t/mnd)`,
+    `  Per år:      ${fmtDec(d.timepris * timerMnd * 12, 0)} kr`,
     '',
-    'KAPITALFORDELING',
-    `  Kapitalandel (leasing + forsikring + kontor): ${state.slKapital}%`,
+    SEP,
+    erowHead(),
+    sep,
+    `  FASTE KOSTNADER  (kapitalandel ${slPct}%)`,
+    erow(`  Leasing`,              d.leasingInkl,    t>0?d.leasingInkl/t:0,    t>0?d.leasingInkl/t*g:0),
+    erow(`  Forsikring`,           d.forsikringInkl, t>0?d.forsikringInkl/t:0, t>0?d.forsikringInkl/t*g:0),
+    erow(`  Service / vedlikehold`,d.serviceInkl,    t>0?d.serviceInkl/t:0,    t>0?d.serviceInkl/t*g:0),
+    erow(`  Bompenger`,            d.bompenger,      t>0?d.bompenger/t:0,      t>0?d.bompenger/t*g:0),
+    erow(`  Skade / erstatninger`, d.skade,          t>0?d.skade/t:0,          t>0?d.skade/t*g:0),
+    erow(`  Kontor / parkering`,   d.kontorInkl,     t>0?d.kontorInkl/t:0,     t>0?d.kontorInkl/t*g:0),
+    ...(state.egneKostnader||[]).filter(e=>e.belop>0)
+      .map(e => erow(`  ${e.navn||'Kostnad'}`, e.belop, t>0?e.belop/t:0, t>0?e.belop/t*g:0)),
     '',
-    'STRØM / DRIVSTOFF',
-    `  Km per dag:            ${state.kmDag} km`,
-    `  Forbruk per 10 km:     ${state.forbruk} kWh`,
-    `  Strømpris:             ${state.strompris} kr/kWh`,
+    `  STRØM / DRIVSTOFF  (${state.kmDag} km/dag × ${state.forbruk} kWh/10km × ${state.strompris} kr/kWh)`,
+    erow(`  Strøm`, d.stromMnd, d.stromPerTime, d.stromPerTime*g),
     '',
-    'SJÅFØR OG SOSIALE KOSTNADER',
-    `  Sjåførkostnad:         ${state.sjaforKost} kr/time`,
-    `  Sosiale kostnader:     ${state.sosialePct}%`,
-    `  Arbeidstid:            ${String(state.fraH ?? 7).padStart(2,'0')}:${String(state.fraM ?? 0).padStart(2,'0')}–${String(state.tilH ?? 16).padStart(2,'0')}:${String(state.tilM ?? 0).padStart(2,'0')}`,
-    `  Fakturerbare dager:    ${(state.selectedDays ?? [0,1,2,3,4]).map(d => ['Man','Tir','Ons','Tor','Fre','Lør','Søn'][d]).join(', ')}`,
-    `  Arbeidstimer per uke:  ${fmtDec(timerUke, 1)} t`,
+    `  SJÅFØR OG SOSIALE  (${tidFra}–${tidTil}, ${dagerStr})`,
+    erow(`  Sjåfør (bruttolønn)`,          null, d.sjaforKost, d.sjaforKost*g),
+    erow(`  Sosiale kost. (${state.sosialePct}%)`, null, d.sosialeKr,  d.sosialeKr*g),
     '',
-    'PÅSLAG',
-    `  Konsernfelles:         ${state.konsernPct}%`,
-    `  Påslag/fortjeneste:    ${state.paslagPct}%`,
+    sep,
+    erow('SUBTOTAL',               null, d.subtotal,  d.subtotal*g),
     '',
-    '='.repeat(40),
-    'RESULTAT',
-    `  Timespris:             ${fmt(getTimepris())}`,
-    `  Per uke:               ${fmt(getTimepris() * timerUke)}`,
-    `  Per måned:             ${fmt(getTimepris() * mndTimer)}`,
-    `  Per år:                ${fmt(getTimepris() * mndTimer * 12)}`,
+    `  PÅSLAG`,
+    erow(`  Konsernfelles (${state.konsernPct}%)`,      null, d.konsernKr, d.konsernKr*g),
+    erow(`  Påslag / fortjeneste (${state.paslagPct}%)`,null, d.paslagKr,  d.paslagKr*g),
+    SEP,
+    erow('>>> TIMESPRIS',          null, d.timepris,  d.timepris*g),
+    SEP,
     '',
-    '='.repeat(40),
     'Åpne kalkulatoren med disse verdiene:',
     url
   ];
@@ -1483,9 +1803,10 @@ function getTimepris() {
 
   const leasingInkl    = leasing * slKapital;
   const forsikringInkl = forsikring * slKapital;
+  const serviceInkl    = service * slKapital;
   const kontorInkl     = kontor * slKapital;
   const egneSum        = egneKostnader.reduce((s, e) => s + (e.belop || 0), 0);
-  const fastMnd        = leasingInkl + forsikringInkl + bompenger + service + skade + kontorInkl + egneSum;
+  const fastMnd        = leasingInkl + forsikringInkl + bompenger + serviceInkl + skade + kontorInkl + egneSum;
   const timerMnd       = timerUke * mndFaktor;
   const kwhPerMnd      = (kmDag * selectedDaysCount / 10) * forbruk * mndFaktor;
   const stromMnd       = kwhPerMnd * strompris;
