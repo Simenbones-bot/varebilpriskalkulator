@@ -146,7 +146,7 @@
 
   .bar-track {
     display: flex;
-    height: 20px;
+    height: 28px;
     border-radius: 6px;
     overflow: hidden;
     gap: 1px;
@@ -157,7 +157,25 @@
     height: 100%;
     transition: width 0.3s ease;
     min-width: 0;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
+
+  .bar-seg-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: #fff;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.2s;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    pointer-events: none;
+  }
+
+  .bar-seg.show-label .bar-seg-label { opacity: 1; }
 
   .bar-legend {
     display: flex;
@@ -519,6 +537,78 @@
     margin: 0.5rem 0;
   }
 
+  /* Annual cost hint */
+  .annual-hint {
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+    margin-top: 0.2rem;
+    text-align: right;
+  }
+
+  /* Day / time selector */
+  .time-picker-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+  }
+
+  .time-picker-row label {
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+  }
+
+  input[type="time"] {
+    padding: 0.45rem 0.65rem;
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-family: inherit;
+    color: var(--text);
+    background: var(--bg);
+    transition: border-color 0.15s, box-shadow 0.15s;
+    width: 110px;
+  }
+
+  input[type="time"]:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+  }
+
+  .day-selector {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-top: 0.6rem;
+  }
+
+  .day-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 34px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid var(--border-strong);
+    background: var(--bg);
+    color: var(--text-secondary);
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+    user-select: none;
+  }
+
+  .day-btn input { display: none; }
+
+  .day-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+
   /* Responsive */
   @media (max-width: 540px) {
     .result-periods { gap: 1rem; flex-wrap: wrap; }
@@ -564,12 +654,12 @@
     <div class="bar-chart">
       <div class="bar-label">Kostnadsfordeling</div>
       <div class="bar-track" id="bar-track">
-        <div class="bar-seg" id="bar-leasing" style="background:var(--c-leasing)"></div>
-        <div class="bar-seg" id="bar-strom" style="background:var(--c-strom)"></div>
-        <div class="bar-seg" id="bar-sjafor" style="background:var(--c-sjafør)"></div>
-        <div class="bar-seg" id="bar-sosiale" style="background:var(--c-sosiale)"></div>
-        <div class="bar-seg" id="bar-konsern" style="background:var(--c-konsern)"></div>
-        <div class="bar-seg" id="bar-paslag" style="background:var(--c-paslag)"></div>
+        <div class="bar-seg" id="bar-leasing" style="background:var(--c-leasing)"><span class="bar-seg-label" id="bar-leasing-lbl"></span></div>
+        <div class="bar-seg" id="bar-strom"   style="background:var(--c-strom)">  <span class="bar-seg-label" id="bar-strom-lbl"></span></div>
+        <div class="bar-seg" id="bar-sjafor"  style="background:var(--c-sjafør)"> <span class="bar-seg-label" id="bar-sjafor-lbl"></span></div>
+        <div class="bar-seg" id="bar-sosiale" style="background:var(--c-sosiale)"><span class="bar-seg-label" id="bar-sosiale-lbl"></span></div>
+        <div class="bar-seg" id="bar-konsern" style="background:var(--c-konsern)"><span class="bar-seg-label" id="bar-konsern-lbl"></span></div>
+        <div class="bar-seg" id="bar-paslag"  style="background:var(--c-paslag)"> <span class="bar-seg-label" id="bar-paslag-lbl"></span></div>
       </div>
       <div class="bar-legend">
         <div class="legend-item"><div class="legend-dot" style="background:var(--c-leasing)"></div><span>Fast/leasing</span></div>
@@ -590,47 +680,63 @@
     </div>
     <div class="card-body">
       <div class="form-row">
+        <div><label>Leasing</label></div>
         <div>
-          <label>Leasing</label>
-        </div>
-        <div class="input-suffix">
-          <input type="number" id="leasing" value="8000" min="0">
-          <span class="suffix-text">kr</span>
+          <div class="input-suffix">
+            <input type="number" id="leasing" value="8000" min="0">
+            <span class="suffix-text">kr/mnd</span>
+          </div>
+          <div class="annual-hint" id="ar-leasing"></div>
         </div>
       </div>
       <div class="form-row">
         <div><label>Forsikring</label></div>
-        <div class="input-suffix">
-          <input type="number" id="forsikring" value="2500" min="0">
-          <span class="suffix-text">kr</span>
+        <div>
+          <div class="input-suffix">
+            <input type="number" id="forsikring" value="2500" min="0">
+            <span class="suffix-text">kr/mnd</span>
+          </div>
+          <div class="annual-hint" id="ar-forsikring"></div>
         </div>
       </div>
       <div class="form-row">
         <div><label>Bompenger</label></div>
-        <div class="input-suffix">
-          <input type="number" id="bompenger" value="500" min="0">
-          <span class="suffix-text">kr</span>
+        <div>
+          <div class="input-suffix">
+            <input type="number" id="bompenger" value="500" min="0">
+            <span class="suffix-text">kr/mnd</span>
+          </div>
+          <div class="annual-hint" id="ar-bompenger"></div>
         </div>
       </div>
       <div class="form-row">
         <div><label>Service / vedlikehold</label></div>
-        <div class="input-suffix">
-          <input type="number" id="service" value="800" min="0">
-          <span class="suffix-text">kr</span>
+        <div>
+          <div class="input-suffix">
+            <input type="number" id="service" value="800" min="0">
+            <span class="suffix-text">kr/mnd</span>
+          </div>
+          <div class="annual-hint" id="ar-service"></div>
         </div>
       </div>
       <div class="form-row">
         <div><label>Skade / erstatninger</label></div>
-        <div class="input-suffix">
-          <input type="number" id="skade" value="400" min="0">
-          <span class="suffix-text">kr</span>
+        <div>
+          <div class="input-suffix">
+            <input type="number" id="skade" value="400" min="0">
+            <span class="suffix-text">kr/mnd</span>
+          </div>
+          <div class="annual-hint" id="ar-skade"></div>
         </div>
       </div>
       <div class="form-row">
         <div><label>Kontor / parkering</label></div>
-        <div class="input-suffix">
-          <input type="number" id="kontor" value="600" min="0">
-          <span class="suffix-text">kr</span>
+        <div>
+          <div class="input-suffix">
+            <input type="number" id="kontor" value="600" min="0">
+            <span class="suffix-text">kr/mnd</span>
+          </div>
+          <div class="annual-hint" id="ar-kontor"></div>
         </div>
       </div>
 
@@ -767,11 +873,30 @@
           <span class="suffix-text">%</span>
         </div>
       </div>
-      <div class="form-row">
-        <div><label>Kjøretimer per uke</label></div>
-        <div class="input-suffix">
-          <input type="number" id="timer-uke" value="37.5" min="0.1" step="0.5">
-          <span class="suffix-text">t/uke</span>
+      <div class="form-row" style="align-items:flex-start;padding-top:0.75rem">
+        <div>
+          <label>Fakturerbare timer</label>
+          <div class="hint">Velg arbeidstid og hvilke dager</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:0.5rem;align-items:flex-end">
+          <div class="time-picker-row">
+            <label>Fra</label>
+            <input type="time" id="fra-tid" value="07:00">
+            <label>til</label>
+            <input type="time" id="til-tid" value="16:00">
+          </div>
+          <div class="day-selector" id="day-selector">
+            <label class="day-btn active" title="Mandag"><input type="checkbox" value="0" checked onchange="onDayChange()">Man</label>
+            <label class="day-btn active" title="Tirsdag"><input type="checkbox" value="1" checked onchange="onDayChange()">Tir</label>
+            <label class="day-btn active" title="Onsdag"><input type="checkbox" value="2" checked onchange="onDayChange()">Ons</label>
+            <label class="day-btn active" title="Torsdag"><input type="checkbox" value="3" checked onchange="onDayChange()">Tor</label>
+            <label class="day-btn active" title="Fredag"><input type="checkbox" value="4" checked onchange="onDayChange()">Fre</label>
+            <label class="day-btn" title="Lørdag"><input type="checkbox" value="5" onchange="onDayChange()">Lør</label>
+            <label class="day-btn" title="Søndag"><input type="checkbox" value="6" onchange="onDayChange()">Søn</label>
+          </div>
+          <div style="font-size:0.78rem;color:var(--text-secondary);text-align:right">
+            <span id="r-timer-dag">0</span> t/dag &nbsp;·&nbsp; <span id="r-timer-uke-display">0</span> t/uke
+          </div>
         </div>
       </div>
       <div class="form-row">
@@ -876,7 +1001,9 @@ const DEFAULTS = {
   strompris: 1.8,
   sjaforKost: 350,
   sosialePct: 25,
-  timerUke: 37.5,
+  fraTid: '07:00',
+  tilTid: '16:00',
+  selectedDays: [0,1,2,3,4],
   virkedager: 230,
   konsernPct: 5,
   paslagPct: 15,
@@ -907,7 +1034,9 @@ function gatherState() {
     strompris: numVal('strompris'),
     sjaforKost: numVal('sjafor-kost'),
     sosialePct: numVal('sosiale-pct'),
-    timerUke: numVal('timer-uke'),
+    fraTid: document.getElementById('fra-tid')?.value || '07:00',
+    tilTid: document.getElementById('til-tid')?.value || '16:00',
+    selectedDays: getSelectedDays(),
     virkedager: numVal('virkedager'),
     konsernPct: numVal('konsern-pct'),
     paslagPct: numVal('paslag-pct'),
@@ -930,7 +1059,9 @@ function applyState(state) {
   setVal('strompris', state.strompris ?? DEFAULTS.strompris);
   setVal('sjafor-kost', state.sjaforKost ?? DEFAULTS.sjaforKost);
   setVal('sosiale-pct', state.sosialePct ?? DEFAULTS.sosialePct);
-  setVal('timer-uke', state.timerUke ?? DEFAULTS.timerUke);
+  setVal('fra-tid', state.fraTid ?? DEFAULTS.fraTid);
+  setVal('til-tid', state.tilTid ?? DEFAULTS.tilTid);
+  setSelectedDays(state.selectedDays ?? DEFAULTS.selectedDays);
   setVal('virkedager', state.virkedager ?? DEFAULTS.virkedager);
   setVal('konsern-pct', state.konsernPct ?? DEFAULTS.konsernPct);
   setVal('paslag-pct', state.paslagPct ?? DEFAULTS.paslagPct);
@@ -1026,6 +1157,43 @@ function removeEgen(id) {
   saveState();
 }
 
+// ─── Day / time helpers ───────────────────────────────────────────────────────
+
+function getSelectedDays() {
+  return [...document.querySelectorAll('#day-selector input[type="checkbox"]')]
+    .filter(cb => cb.checked)
+    .map(cb => parseInt(cb.value));
+}
+
+function setSelectedDays(days) {
+  document.querySelectorAll('#day-selector input[type="checkbox"]').forEach(cb => {
+    const active = days.includes(parseInt(cb.value));
+    cb.checked = active;
+    cb.closest('.day-btn').classList.toggle('active', active);
+  });
+}
+
+function onDayChange() {
+  // sync active class
+  document.querySelectorAll('#day-selector input[type="checkbox"]').forEach(cb => {
+    cb.closest('.day-btn').classList.toggle('active', cb.checked);
+  });
+  recalc();
+  saveState();
+}
+
+function calcTimerUke() {
+  const fra = document.getElementById('fra-tid')?.value || '07:00';
+  const til = document.getElementById('til-tid')?.value || '16:00';
+  const [fh, fm] = fra.split(':').map(Number);
+  const [th, tm] = til.split(':').map(Number);
+  let mins = (th * 60 + tm) - (fh * 60 + fm);
+  if (mins < 0) mins += 24 * 60; // overnight shift
+  const hoursPerDay = mins / 60;
+  const days = getSelectedDays().length;
+  return { hoursPerDay, timerUke: hoursPerDay * days };
+}
+
 // ─── Slider handler ───────────────────────────────────────────────────────────
 
 function onSlider() {
@@ -1061,12 +1229,24 @@ function recalc() {
   const forbruk      = numVal('forbruk');
   const strompris    = numVal('strompris');
 
+  // Annual cost hints for fixed costs
+  const arFields = ['leasing','forsikring','bompenger','service','skade','kontor'];
+  arFields.forEach(id => {
+    const el = document.getElementById('ar-' + id);
+    if (el) el.textContent = '= ' + Math.round(numVal(id) * 12).toLocaleString('nb-NO') + ' kr/år';
+  });
+
   const sjaforKost   = numVal('sjafor-kost');
   const sosialePct   = numVal('sosiale-pct');
-  const timerUke     = numVal('timer-uke') || 1;
+  const { hoursPerDay, timerUke: timerUkeRaw } = calcTimerUke();
+  const timerUke     = timerUkeRaw || 1;
   const virkedager   = numVal('virkedager') || 230;
   // virkedager/år ÷ 5 dager/uke ÷ 12 mnd = effektive uker per mnd
   const mndFaktor    = virkedager / 60;
+
+  // Update time display
+  setText('r-timer-dag', fmtDec(hoursPerDay, 1));
+  setText('r-timer-uke-display', fmtDec(timerUkeRaw, 1));
 
   const konsernPct   = numVal('konsern-pct') / 100;
   const paslagPct    = numVal('paslag-pct') / 100;
@@ -1133,15 +1313,24 @@ function recalc() {
   const totalComponents  = fastKomponent + stromKomponent + sjaforKomponent + sosialeKomponent + konsernKomponent + paslagKomponent;
 
   // Bar chart
-  function barPct(val) {
-    return totalComponents > 0 ? (val / totalComponents * 100).toFixed(2) + '%' : '0%';
-  }
-  document.getElementById('bar-leasing').style.width  = barPct(fastKomponent);
-  document.getElementById('bar-strom').style.width    = barPct(stromKomponent);
-  document.getElementById('bar-sjafor').style.width   = barPct(sjaforKomponent);
-  document.getElementById('bar-sosiale').style.width  = barPct(sosialeKomponent);
-  document.getElementById('bar-konsern').style.width  = barPct(konsernKomponent);
-  document.getElementById('bar-paslag').style.width   = barPct(paslagKomponent);
+  const barSegs = [
+    { id: 'bar-leasing', val: fastKomponent },
+    { id: 'bar-strom',   val: stromKomponent },
+    { id: 'bar-sjafor',  val: sjaforKomponent },
+    { id: 'bar-sosiale', val: sosialeKomponent },
+    { id: 'bar-konsern', val: konsernKomponent },
+    { id: 'bar-paslag',  val: paslagKomponent },
+  ];
+  barSegs.forEach(({ id, val }) => {
+    const pct = totalComponents > 0 ? val / totalComponents * 100 : 0;
+    const seg = document.getElementById(id);
+    const lbl = document.getElementById(id + '-lbl');
+    seg.style.width = pct.toFixed(2) + '%';
+    if (lbl) {
+      lbl.textContent = pct >= 6 ? Math.round(pct) + '%' : '';
+      seg.classList.toggle('show-label', pct >= 6);
+    }
+  });
 
   // Results
   const ukeTimer = timerUke;
@@ -1212,7 +1401,8 @@ function buildEmailBody() {
     'SJÅFØR OG SOSIALE KOSTNADER',
     `  Sjåførkostnad:         ${state.sjaforKost} kr/time`,
     `  Sosiale kostnader:     ${state.sosialePct}%`,
-    `  Kjøretimer per uke:    ${state.timerUke} t/uke`,
+    `  Arbeidstid:            ${state.fraTid ?? '07:00'}–${state.tilTid ?? '16:00'}`,
+    `  Fakturerbare dager:    ${(state.selectedDays ?? [0,1,2,3,4]).map(d => ['Man','Tir','Ons','Tor','Fre','Lør','Søn'][d]).join(', ')}`,
     `  Virkedager per år:     ${state.virkedager ?? 230} dager`,
     '',
     'PÅSLAG',
@@ -1246,7 +1436,8 @@ function getTimepris() {
   const strompris    = numVal('strompris');
   const sjaforKost   = numVal('sjafor-kost');
   const sosialePct   = numVal('sosiale-pct');
-  const timerUke     = numVal('timer-uke') || 1;
+  const { timerUke: timerUkeRaw } = calcTimerUke();
+  const timerUke     = timerUkeRaw || 1;
   const virkedager   = numVal('virkedager') || 230;
   const mndFaktor    = virkedager / 60;
   const konsernPct   = numVal('konsern-pct') / 100;
@@ -1299,7 +1490,7 @@ function attachListeners() {
   const ids = [
     'leasing','forsikring','bompenger','service','skade','kontor',
     'km-uke','forbruk','strompris',
-    'sjafor-kost','sosiale-pct','timer-uke','virkedager',
+    'sjafor-kost','sosiale-pct','fra-tid','til-tid','virkedager',
     'konsern-pct','paslag-pct',
     'sl-kapital'
   ];
