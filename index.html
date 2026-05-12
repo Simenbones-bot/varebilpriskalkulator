@@ -902,7 +902,7 @@
         <div><label>Leasing</label></div>
         <div>
           <div class="input-suffix">
-            <input type="number" id="leasing" value="8000" min="0">
+            <input type="number" id="leasing" value="20000" min="0">
             <span class="suffix-text">kr/mnd</span>
           </div>
           <div class="annual-hint" id="ar-leasing"></div>
@@ -912,7 +912,7 @@
         <div><label>Forsikring</label></div>
         <div>
           <div class="input-suffix">
-            <input type="number" id="forsikring" value="2500" min="0">
+            <input type="number" id="forsikring" value="1500" min="0">
             <span class="suffix-text">kr/mnd</span>
           </div>
           <div class="annual-hint" id="ar-forsikring"></div>
@@ -922,7 +922,7 @@
         <div><label>Bompenger</label></div>
         <div>
           <div class="input-suffix">
-            <input type="number" id="bompenger" value="500" min="0">
+            <input type="number" id="bompenger" value="0" min="0">
             <span class="suffix-text">kr/mnd</span>
           </div>
           <div class="annual-hint" id="ar-bompenger"></div>
@@ -942,7 +942,7 @@
         <div><label>Dekk / dekkhotell</label></div>
         <div>
           <div class="input-suffix">
-            <input type="number" id="dekk" value="300" min="0">
+            <input type="number" id="dekk" value="500" min="0">
             <span class="suffix-text">kr/mnd</span>
           </div>
           <div class="annual-hint" id="ar-dekk"></div>
@@ -952,7 +952,7 @@
         <div><label>Skade / erstatninger</label></div>
         <div>
           <div class="input-suffix">
-            <input type="number" id="skade" value="400" min="0">
+            <input type="number" id="skade" value="2000" min="0">
             <span class="suffix-text">kr/mnd</span>
           </div>
           <div class="annual-hint" id="ar-skade"></div>
@@ -962,7 +962,7 @@
         <div><label>Kontor / parkering</label></div>
         <div>
           <div class="input-suffix">
-            <input type="number" id="kontor" value="600" min="0">
+            <input type="number" id="kontor" value="2000" min="0">
             <span class="suffix-text">kr/mnd</span>
           </div>
           <div class="annual-hint" id="ar-kontor"></div>
@@ -1041,14 +1041,14 @@
           <div class="hint">kWh – typisk 2–3 kWh for el-varebil</div>
         </div>
         <div class="input-suffix">
-          <input type="number" id="forbruk" value="2.5" min="0" step="0.1">
+          <input type="number" id="forbruk" value="3" min="0" step="0.1">
           <span class="suffix-text">kWh/10km</span>
         </div>
       </div>
       <div class="form-row">
         <div><label>Strømpris</label></div>
         <div class="input-suffix">
-          <input type="number" id="strompris" value="1.8" min="0" step="0.01">
+          <input type="number" id="strompris" value="5" min="0" step="0.01">
           <span class="suffix-text">kr/kWh</span>
         </div>
       </div>
@@ -1100,7 +1100,7 @@
           <div class="hint">Bruttolønn eller timesats</div>
         </div>
         <div class="input-suffix">
-          <input type="number" id="sjafor-kost" value="350" min="0">
+          <input type="number" id="sjafor-kost" value="250" min="0">
           <span class="suffix-text">kr/time</span>
         </div>
       </div>
@@ -1123,7 +1123,7 @@
           <div class="time-picker-row">
             <label>Fra</label>
             <div class="time-input-group">
-              <input type="number" class="time-h" id="fra-h" value="7" min="0" max="23" oninput="onTimeChange()">
+              <input type="number" class="time-h" id="fra-h" value="8" min="0" max="23" oninput="onTimeChange()">
               <span class="time-sep">:</span>
               <input type="number" class="time-m" id="fra-m" value="0" min="0" max="59" oninput="onTimeChange()">
             </div>
@@ -1186,7 +1186,7 @@
           <div class="hint">Legges på first, på alle kostnader</div>
         </div>
         <div class="input-suffix">
-          <input type="number" id="konsern-pct" value="5" min="0" max="200" step="0.5">
+          <input type="number" id="konsern-pct" value="6" min="0" max="200" step="0.5">
           <span class="suffix-text">%</span>
         </div>
       </div>
@@ -1196,7 +1196,7 @@
           <div class="hint">Legges på etter konsernfelles</div>
         </div>
         <div class="input-suffix">
-          <input type="number" id="paslag-pct" value="15" min="0" max="500" step="0.5">
+          <input type="number" id="paslag-pct" value="5" min="0" max="500" step="0.5">
           <span class="suffix-text">%</span>
         </div>
       </div>
@@ -1243,24 +1243,24 @@
 // ─── State & Defaults ────────────────────────────────────────────────────────
 
 const DEFAULTS = {
-  leasing: 8000,
-  forsikring: 2500,
-  bompenger: 500,
+  leasing: 20000,
+  forsikring: 1500,
+  bompenger: 0,
   service: 800,
-  dekk: 300,
-  skade: 400,
-  kontor: 600,
+  dekk: 500,
+  skade: 2000,
+  kontor: 2000,
   slKapital: 100,
   kmDag: 100,
-  forbruk: 2.5,
-  strompris: 1.8,
-  sjaforKost: 350,
+  forbruk: 3,
+  strompris: 5,
+  sjaforKost: 250,
   sosialePct: 25,
-  fraH: 7, fraM: 0,
+  fraH: 8, fraM: 0,
   tilH: 16, tilM: 0,
   selectedDays: [0,1,2,3,4],
-  konsernPct: 5,
-  paslagPct: 15,
+  konsernPct: 6,
+  paslagPct: 5,
   egneKostnader: []
 };
 
