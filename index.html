@@ -85,6 +85,54 @@
     z-index: 9;
   }
 
+  .result-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+
+  .result-toggle {
+    background: rgba(255,255,255,0.12);
+    border: none;
+    color: #fff;
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 0.25rem;
+    transition: background 0.15s;
+  }
+  .result-toggle:hover { background: rgba(255,255,255,0.22); }
+
+  .toggle-icon {
+    width: 18px;
+    height: 18px;
+    stroke: currentColor;
+    stroke-width: 2;
+    fill: none;
+    transition: transform 0.25s ease;
+  }
+
+  .result-collapsible {
+    overflow: hidden;
+    max-height: 600px;
+    transition: max-height 0.3s ease, opacity 0.25s ease;
+    opacity: 1;
+  }
+
+  .result-card.collapsed .result-collapsible {
+    max-height: 0;
+    opacity: 0;
+  }
+
+  .result-card.collapsed .toggle-icon {
+    transform: rotate(180deg);
+  }
+
   .result-card .label {
     font-size: 0.75rem;
     text-transform: uppercase;
@@ -792,42 +840,53 @@
 <div class="container">
 
   <!-- RESULT CARD -->
-  <div class="result-card">
-    <div class="label">Timespris inkl. alt</div>
-    <div class="timepris-main" id="r-timepris">0 <span>kr/time</span></div>
-
-    <div class="result-periods">
-      <div class="period">
-        <div class="val" id="r-uke">0 kr</div>
-        <div class="lbl">per uke</div>
+  <div class="result-card" id="result-card">
+    <div class="result-card-top">
+      <div>
+        <div class="label">Timespris inkl. alt</div>
+        <div class="timepris-main" id="r-timepris">0 <span>kr/time</span></div>
       </div>
-      <div class="period">
-        <div class="val" id="r-mnd">0 kr</div>
-        <div class="lbl">per måned</div>
-      </div>
-      <div class="period">
-        <div class="val" id="r-ar">0 kr</div>
-        <div class="lbl">per år</div>
-      </div>
+      <button class="result-toggle" onclick="toggleResultCard()" title="Minimer/ekspander" aria-label="Minimer">
+        <svg class="toggle-icon" viewBox="0 0 20 20">
+          <path d="M5 8l5 5 5-5"/>
+        </svg>
+      </button>
     </div>
 
-    <div class="bar-chart">
-      <div class="bar-label">Kostnadsfordeling</div>
-      <div class="bar-track" id="bar-track">
-        <div class="bar-seg" id="bar-leasing" style="background:var(--c-leasing)"><span class="bar-seg-label" id="bar-leasing-lbl"></span></div>
-        <div class="bar-seg" id="bar-strom"   style="background:var(--c-strom)">  <span class="bar-seg-label" id="bar-strom-lbl"></span></div>
-        <div class="bar-seg" id="bar-sjafor"  style="background:var(--c-sjafør)"> <span class="bar-seg-label" id="bar-sjafor-lbl"></span></div>
-        <div class="bar-seg" id="bar-sosiale" style="background:var(--c-sosiale)"><span class="bar-seg-label" id="bar-sosiale-lbl"></span></div>
-        <div class="bar-seg" id="bar-konsern" style="background:var(--c-konsern)"><span class="bar-seg-label" id="bar-konsern-lbl"></span></div>
-        <div class="bar-seg" id="bar-paslag"  style="background:var(--c-paslag)"> <span class="bar-seg-label" id="bar-paslag-lbl"></span></div>
+    <div class="result-collapsible">
+      <div class="result-periods">
+        <div class="period">
+          <div class="val" id="r-uke">0 kr</div>
+          <div class="lbl">per uke</div>
+        </div>
+        <div class="period">
+          <div class="val" id="r-mnd">0 kr</div>
+          <div class="lbl">per måned</div>
+        </div>
+        <div class="period">
+          <div class="val" id="r-ar">0 kr</div>
+          <div class="lbl">per år</div>
+        </div>
       </div>
-      <div class="bar-legend">
-        <div class="legend-item"><div class="legend-dot" style="background:var(--c-leasing)"></div><span>Fast/leasing</span></div>
-        <div class="legend-item"><div class="legend-dot" style="background:var(--c-strom)"></div><span>Strøm</span></div>
-        <div class="legend-item"><div class="legend-dot" style="background:var(--c-sjafør)"></div><span>Sjåfør</span></div>
-        <div class="legend-item"><div class="legend-dot" style="background:var(--c-sosiale)"></div><span>Sosiale kost.</span></div>
-        <div class="legend-item"><div class="legend-dot" style="background:var(--c-konsern)"></div><span>Konsernfelles</span></div>
-        <div class="legend-item"><div class="legend-dot" style="background:var(--c-paslag)"></div><span>Påslag</span></div>
+
+      <div class="bar-chart">
+        <div class="bar-label">Kostnadsfordeling</div>
+        <div class="bar-track" id="bar-track">
+          <div class="bar-seg" id="bar-leasing" style="background:var(--c-leasing)"><span class="bar-seg-label" id="bar-leasing-lbl"></span></div>
+          <div class="bar-seg" id="bar-strom"   style="background:var(--c-strom)">  <span class="bar-seg-label" id="bar-strom-lbl"></span></div>
+          <div class="bar-seg" id="bar-sjafor"  style="background:var(--c-sjafør)"> <span class="bar-seg-label" id="bar-sjafor-lbl"></span></div>
+          <div class="bar-seg" id="bar-sosiale" style="background:var(--c-sosiale)"><span class="bar-seg-label" id="bar-sosiale-lbl"></span></div>
+          <div class="bar-seg" id="bar-konsern" style="background:var(--c-konsern)"><span class="bar-seg-label" id="bar-konsern-lbl"></span></div>
+          <div class="bar-seg" id="bar-paslag"  style="background:var(--c-paslag)"> <span class="bar-seg-label" id="bar-paslag-lbl"></span></div>
+        </div>
+        <div class="bar-legend">
+          <div class="legend-item"><div class="legend-dot" style="background:var(--c-leasing)"></div><span>Fast/leasing</span></div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--c-strom)"></div><span>Strøm</span></div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--c-sjafør)"></div><span>Sjåfør</span></div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--c-sosiale)"></div><span>Sosiale kost.</span></div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--c-konsern)"></div><span>Konsernfelles</span></div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--c-paslag)"></div><span>Påslag</span></div>
+        </div>
       </div>
     </div>
   </div>
@@ -1439,6 +1498,15 @@ function updateStickyTop() {
 
 window.addEventListener('resize', updateStickyTop);
 
+function toggleResultCard() {
+  const card = document.getElementById('result-card');
+  card.classList.toggle('collapsed');
+  try {
+    localStorage.setItem('vpk_card_collapsed', card.classList.contains('collapsed') ? '1' : '0');
+  } catch(e) {}
+  setTimeout(updateStickyTop, 320);
+}
+
 // ─── Core recalculation ───────────────────────────────────────────────────────
 
 function recalc() {
@@ -1944,6 +2012,11 @@ function attachListeners() {
   attachListeners();
   recalc();
   updateStickyTop();
+  try {
+    if (localStorage.getItem('vpk_card_collapsed') === '1') {
+      document.getElementById('result-card').classList.add('collapsed');
+    }
+  } catch(e) {}
 })();
 </script>
 </body>
