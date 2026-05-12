@@ -1537,8 +1537,8 @@ function recalc() {
   const timerUke     = timerUkeRaw || 1;
   const selectedDaysCount = getSelectedDays().length;
   const mndFaktor    = 4.33; // kun for km/strøm-beregning
-  const timerAr      = 1950; // norsk standard: 37,5 t/uke × 52 uker
-  const timerMnd     = timerAr / 12; // 162,5 t/mnd
+  const timerAr      = timerUke * 52; // faktiske timer basert på tidsplukkeren
+  const timerMnd     = timerAr / 12;
 
   // Update time display
   setText('r-timer-dag', fmtDec(hoursPerDay, 1));
@@ -1672,8 +1672,8 @@ function buildDetailData() {
   const timerUke   = timerUkeRaw || 1;
   const selDays    = getSelectedDays().length || 1;
   const mndFaktor  = 4.33; // kun for km/strøm
-  const timerAr    = 1950; // norsk standard
-  const timerMnd   = timerAr / 12; // 162,5 t/mnd
+  const timerAr    = timerUke * 52; // faktiske timer basert på tidsplukkeren
+  const timerMnd   = timerAr / 12;
   const konsernPct = numVal('konsern-pct') / 100;
   const paslagPct  = numVal('paslag-pct') / 100;
 
@@ -1767,7 +1767,7 @@ function showDetailView() {
   const html = `
     <p style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:1.25rem">
       Beregnet på <strong>${fmtDec(timerMnd,1)} effektive timer/mnd</strong>
-      (${fmtDec(timerUke,1)} t/uke &times; ${4.33} mnd-faktor)
+      (${fmtDec(timerUke,1)} t/uke &times; 52 uker / 12)
     </p>
     <table class="detail-table">
       <thead><tr>
@@ -1927,7 +1927,7 @@ function getTimepris() {
   const timerUke     = timerUkeRaw || 1;
   const selectedDaysCount = getSelectedDays().length;
   const mndFaktor    = 4.33; // kun for km/strøm
-  const timerMnd     = 1950 / 12; // norsk standard
+  const timerMnd     = (timerUke * 52) / 12; // faktiske timer basert på tidsplukkeren
   const konsernPct   = numVal('konsern-pct') / 100;
   const paslagPct    = numVal('paslag-pct') / 100;
 
